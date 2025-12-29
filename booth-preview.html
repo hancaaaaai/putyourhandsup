@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>拍貼｜模板預覽</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* 基本 */
+    *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+    html,body{height:100%;margin:0;background:#fff;color:#3b3f44;font-family:"Manrope","Noto Sans TC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
+    body{overscroll-behavior:none;touch-action:manipulation;}
+    figure{margin:0;}
+
+    /* 舞台：固定 1366×1024 */
+    .outer{
+      width:100vw;
+      height: calc(var(--vh, 1vh) * 100);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      background:#fff;
+    }
+    @supports(height:100dvh){ .outer{height:100dvh;} }
+    .stage{width:1366px;height:1024px;position:relative;}
+    .fit{width:1366px;height:1024px;max-width:100%;max-height:100%;}
+
+    /* 版面：左文右圖 */
+    .wrap{
+      position:absolute;inset:0;
+      display:grid;align-items:center;
+      grid-template-columns:520px 440px; 
+      column-gap:56px;
+      padding:72px;
+    }
+
+    .left h2{font-weight:900;font-size:34px;margin:0 0 10px;}
+    .left p{font-weight:900;font-size:28px;margin:0;color:#666;}
+    .left p strong {color: #3b3f44; font-size: 36px;} 
+    .left p + p{margin-top:8px;}
+    
+    .cta{
+      margin-top:40px;display:inline-block;padding:16px 32px;
+      border-radius:20px;background:#bfefff;color:#1f2a33;text-decoration:none;
+      font-weight:900;font-size:28px;
+      box-shadow:0 6px 0 rgba(0,0,0,.12),0 12px 32px rgba(0,0,0,.06);
+      transition:transform .08s ease, background .15s ease, box-shadow .15s ease;
+    }
+    .cta:hover{background:#a8e6ff;transform:translateY(-1px);}
+    .cta:active{transform:translateY(1px);}
+
+    /* 右側模板框 */
+    .right{display:grid;place-items:center;}
+    
+    .frame{
+      /* 這裡配合你的模板比例 (9:16) */
+      width: 450px; 
+      height: 800px; 
+      display:grid; place-items:center;
+      
+      /* ★ 這裡加個底色，讓透明挖空的地方看起來有東西 */
+      background: #bceeff; 
+      
+      border-radius:12px;
+      box-shadow:0 20px 40px rgba(0,0,0,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ★ 修改點：改為控制 video 標籤 */
+    .frame video {
+      display:block;
+      width:100%;
+      height:100%;
+      object-fit:contain; /* 確保整張模板完整顯示 */
+      z-index: 10;
+    }
+
+    .stage{ transform: translateY(-2vh); }
+    @media (max-height: 740px){ .stage{ transform: translateY(-3vh); } }
+  </style>
+
+  <script>
+    (function(){
+      function setVH(){
+        var h = (window.visualViewport? visualViewport.height : window.innerHeight);
+        document.documentElement.style.setProperty('--vh', (h*0.01) + 'px');
+      }
+      setVH();
+      addEventListener('resize', setVH, {passive:true});
+      addEventListener('orientationchange', setVH, {passive:true});
+    })();
+  </script>
+</head>
+<body>
+  <div class="outer">
+    <div class="stage fit">
+      <div class="wrap">
+        <div class="left">
+          <h2>這是你的專屬模板</h2>
+          <p>沒錯！那就是我本人</p>
+          <p>快來跟我一起比 <strong id="role-name">旅人</strong> 的手語吧！</p>
+          <p style="font-size: 20px; margin-top: 20px; color: #888;">
+            待會要拍 3 張照片，<br>分別會填入右邊這三個框框喔！
+          </p>
+          <a class="cta" href="booth-duo-ipad.html">走吧！</a>
+        </div>
+        
+        <div class="right">
+          <figure class="frame">
+            <video id="tpl-video" src="video/拍貼模板_透明.webm" autoplay loop muted playsinline></video>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    try {
+      // 1. 讀取使用者角色
+      const data = JSON.parse(localStorage.getItem('photobooth_template') || '{}');
+      if(data.role) {
+        document.getElementById('role-name').textContent = data.role;
+      }
+      
+      // 2. 模板目前固定使用 video/拍貼模板_透明.webm
+      // 如果未來有不同角色的專屬動態模板，可以在這裡動態修改 video.src
+
+    } catch(e) {
+      console.warn('讀取資料失敗', e);
+    }
+  </script>
+</body>
+</html>

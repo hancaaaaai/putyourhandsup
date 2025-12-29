@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>拍貼｜動作引導模式 (合成版)</title>
+
+<style>
+html,body{
+  margin:0; background:#000; overflow:hidden;
+  overscroll-behavior:none; touch-action:manipulation;
+  font-family:"Noto Sans TC",system-ui;
+}
+*{user-select:none;-webkit-user-select:none;}
+
+/* 修改：強制全螢幕，不留黑邊 */
+.stage {
+  width: 100vw;   /* 視窗寬度 100% */
+  height: 100vh;  /* 視窗高度 100% */
+  position: relative;
+  background: #000;
+  overflow: hidden; /* 防止捲軸出現 */
+}
+
+#composite-canvas {
+  width: 100%;
+  height: 100%;
+  /* 關鍵：cover 會讓畫面填滿整個螢幕，可能會裁切掉一點邊緣，但絕對不會有黑邊 */
+  object-fit: cover; 
+  display: block;
+}
+#cam, #char-video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1px; height: 1px;
+  opacity: 0; 
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ★ 修改點：右側半身引導框 (Overlay) */
+/* ★ 修改點：右側半身引導框 (人形圖示風格) */
+.guide-box {
+  position: absolute;
+  bottom: 0; 
+  right: 20%; /* 位置 */
+  width: 500px; /* 身體寬度 */
+  height: 60%;  /* 身體高度 */
+  
+  /* 畫出身體：上方圓弧，下方直角 */
+  border: 4px dashed rgba(255, 255, 255, 0.3); /* 淡淡的白色虛線 */
+  border-bottom: none; 
+  border-radius: 250px 250px 0 0; /* 讓頂部變成半圓拱形 */
+  
+  pointer-events: none; 
+  z-index: 50; 
+  /* 移除原本的陰影，讓畫面更清爽 */
+  box-shadow: none;
+}
+
+/* ★ 修改點：利用偽元素畫出「頭部」 */
+.guide-box::before {
+  content: ""; /* 把原本的文字拿掉，只留形狀 */
+  position: absolute;
+  
+  /* 頭部的大小與位置 */
+  width: 180px; 
+  height: 180px;
+  top: -220px; /* 往上推，與身體分開 */
+  left: 50%;
+  transform: translateX(-50%); /* 置中 */
+  
+  /* 頭部的樣式 */
+  border: 4px dashed rgba(255, 255, 255, 0.3); /* 跟身體一樣淡淡的 */
+  border-radius: 50%; /* 圓形 */
+}
+
+/* ★ 修改點：胸前手勢提示區 (變淡、變文字為主) */
+.hand-area {
+  position: absolute;
+  top: 10%; /* 在身體框框內的相對位置，大約胸口 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 200px;
+  
+ /* 這裡改成 none，就看不到框框了 */
+  border: none; 
+  background: transparent;
+  
+  display: flex; justify-content: center; align-items: center;
+}
+
+.hand-area span {
+  /* 文字樣式：淡淡的白字 */
+  background: rgba(0, 0, 0, 0.2); /* 極淡的黑底襯托文字 */
+  padding: 8px 20px;
+  border-radius: 50px;
+  color: rgba(255, 255, 255, 0.7); /* 淡淡的白色 */
+  font-weight: 500; /* 字體不用太粗 */
+  font-size: 24px;
+  letter-spacing: 2px;
+}
+
+/* 左上角狀態列 */
+.top-status {
+  position: absolute; top: 30px; left: 30px; z-index: 100;
+  display: flex; align-items: center; gap: 15px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 15px 30px; border-radius: 50px;
+  backdrop-filter: blur(10px);
+  color: #fff; font-weight: 900; font-size: 32px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+
+/* 錄影紅點 */
+.rec-dot {
+  width: 24px; height: 24px; background: #ff3b30; border-radius: 50%;
+  display: none; 
+}
+.recording .rec-dot { display: block; animation: pulse 1s infinite; }
+.recording { border: 2px solid rgba(255, 59, 48, 0.5); background: rgba(50, 0, 0, 0.6); }
+
+@keyframes pulse { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
+
+/* 閃光燈效果 */
+.flash{
+  position:absolute; inset:0; background:#fff; opacity:0; transition:.12s; z-index: 60; pointer-events: none;
+}
+
+/* 準備畫面遮罩 */
+.loading{
+  position:absolute; inset:0; display:flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 20px;
+  background:rgba(0,0,0,.7); color:#fff;
+  opacity:0; transition:.2s; z-index: 70; pointer-events: none;
+  backdrop-filter: blur(5px);
+}
+.loading h2 { font-size: 60px; margin: 0; font-weight: 900; }
+.loading p { font-size: 32px; margin: 0; opacity: 0.9; }
+.show{opacity:1; pointer-events:auto;}
+
+/* 開始按鈕 */
+.startBtn{
+  position:absolute; inset:0; margin:auto; width:420px; height:120px;
+  font-size:32px; font-weight:900; border-radius:60px; border:0; cursor:pointer;
+  background: #bfefff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: transform 0.2s; z-index: 80;
+}
+.startBtn:active { transform: scale(0.95); }
+</style>
+</head>
+
+<body>
+<div class="stage">
+  <canvas id="composite-canvas" width="1920" height="1080"></canvas>
+  
+  <div class="guide-box">
+    <div class="hand-area">
+      <span>手放胸前</span>
+    </div>
+  </div>
+
+  <video id="cam" autoplay playsinline muted></video>
+  <video id="char-video" loop muted playsinline crossorigin="anonymous"></video>
+  <img id="char-img" style="display:none;" crossorigin="anonymous">
+  
+  <div id="status-bar" class="top-status">
+    <div class="rec-dot"></div>
+    <span id="status-text">準備中</span>
+  </div>
+
+  <div id="flash" class="flash"></div>
+
+  <div id="loading" class="loading">
+    <h2 id="msg-title">準備中...</h2>
+    <p id="msg-sub">請稍候</p>
+  </div>
+
+  <button id="start" class="startBtn">📸 開始動態拍貼</button>
+</div>
+
+<script>
+/* =====================
+   0. 資料庫工具
+===================== */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("PhotoboothDB", 3);
+    request.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("videos")) db.createObjectStore("videos");
+    };
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => { console.error("DB Error", e); reject(e); };
+  });
+}
+
+async function saveClipToDB(blob, index) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction("videos", "readwrite");
+    const store = tx.objectStore("videos");
+    store.put(blob, `clip_${index}`);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => resolve(); 
+  });
+}
+
+async function saveFullVideoToDB(blob) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction("videos", "readwrite");
+    const store = tx.objectStore("videos");
+    store.put(blob, "latest");
+    tx.oncomplete = () => resolve();
+  });
+}
+
+/* =====================
+   1. 設定與流程
+===================== */
+let currentRole = '淘氣女'; 
+try {
+  const savedData = JSON.parse(localStorage.getItem('photobooth_template'));
+  if (savedData && savedData.role) {
+    currentRole = savedData.role;
+  }
+} catch (e) {
+  console.log("讀取角色失敗，使用預設值");
+}
+
+const SEQUENCE = [
+  {
+    title: '動作 1',
+    sub: '請跟著小人做：雙手面對面',
+    type: 'image', 
+    src: `video/${currentRole}_1.png` 
+  },
+  {
+    title: '動作 2',
+    sub: '上下動雙手，手指靈動',
+    type: 'video',
+    src: `video/${currentRole}_2.webm`
+  },
+  {
+    title: '動作 3',
+    sub: '最後一張：翹起小拇指',
+    type: 'video',
+    src: `video/${currentRole}_3.webm`
+  }
+];
+
+const cam = document.getElementById('cam');
+const charVideo = document.getElementById('char-video');
+const canvas = document.getElementById('composite-canvas');
+const ctx = canvas.getContext('2d');
+const charImg = document.getElementById('char-img');
+let currentMediaType = 'video'; 
+
+const flash = document.getElementById('flash');
+const loading = document.getElementById('loading');
+const msgTitle = document.getElementById('msg-title');
+const msgSub = document.getElementById('msg-sub');
+const startBtn = document.getElementById('start');
+const statusBar = document.getElementById('status-bar');
+const statusText = document.getElementById('status-text');
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+let stream = null;
+let canvasStream = null;
+let fullRecorder = null;
+let fullChunks = [];
+let shooting = false;
+let animationId = null;
+
+/* =====================
+   2. 畫面合成邏輯
+===================== */
+function startCanvasLoop() {
+  canvas.width = 1920;
+  canvas.height = 1080;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. 繪製相機
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    
+    if (cam.readyState >= 2) {
+      ctx.drawImage(cam, 0, 0, canvas.width, canvas.height);
+    }
+    ctx.restore();
+
+    // 2. 繪製角色
+// 2. 繪製角色
+    // ▼▼▼▼▼▼▼▼▼▼ 調整這裡的數字 ▼▼▼▼▼▼▼▼▼▼
+    const scale = 0.85;       // 大小：0.85 代表佔畫面高度的 85% (數字越小人越小)
+    const marginLeft = 90;    // 水平位置：距離左邊界多少像素 (數字越大越往右)
+    const marginBottom = -170; // 垂直位置：距離底部多少像素 (正數往上浮，負數往下沉)
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+    const charH = canvas.height * scale; 
+    // 計算 Y 座標 (畫布高度 - 角色高度 - 底部留白)
+    const y = canvas.height - charH - marginBottom;
+    
+    // 統一設定 X 座標
+    const x = marginLeft;
+
+    if (currentMediaType === 'video') {
+       if (charVideo.readyState >= 2 && !charVideo.paused && !charVideo.ended && charVideo.currentTime > 0) {
+          const ratio = charVideo.videoWidth / charVideo.videoHeight;
+          const charW = charH * ratio; // 根據高度自動算出寬度，保持比例
+          ctx.drawImage(charVideo, x, y, charW, charH);
+       }
+    } 
+    else if (currentMediaType === 'image') {
+       if (charImg.complete && charImg.naturalHeight !== 0) {
+          const ratio = charImg.naturalWidth / charImg.naturalHeight;
+          const charW = charH * ratio;
+          ctx.drawImage(charImg, x, y, charW, charH);
+       }
+    }
+    animationId = requestAnimationFrame(draw);
+  }
+  
+  draw();
+}
+
+async function startCamera(){
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+      audio: false
+    });
+    cam.srcObject = stream;
+    await cam.play();
+    
+    startCanvasLoop();
+    canvasStream = canvas.captureStream(30);
+    
+  } catch (err) {
+    console.error("相機失敗", err);
+    alert("無法啟動相機");
+  }
+}
+
+/* =====================
+   3. 流程控制
+===================== */
+
+function setStepUI(index) {
+  const step = SEQUENCE[index];
+  
+  currentMediaType = step.type;
+
+  if (step.type === 'image') {
+    charImg.src = step.src;
+    charVideo.pause();
+  } else {
+    if (charVideo.getAttribute('src') !== step.src) {
+      charVideo.src = step.src;
+      charVideo.play().catch(e => console.log('Autoplay blocked'));
+    } else {
+      charVideo.play();
+    }
+  }
+  
+  msgTitle.innerHTML = step.title;
+  msgSub.textContent = step.sub;
+  loading.classList.add('show');
+}
+
+async function countdown(){
+  loading.classList.remove('show'); 
+  statusBar.classList.remove('recording');
+  
+  for(let i=5; i>0; i--){
+    statusText.textContent = `準備... ${i}`;
+    await sleep(1000);
+  }
+}
+
+function shutterFX(){
+  flash.classList.add('show');
+  setTimeout(()=>flash.classList.remove('show'), 150);
+}
+
+function recordClip(duration = 2500) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
+
+    const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 5000000 });
+    
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+    
+    recorder.start();
+    setTimeout(() => recorder.stop(), duration);
+  });
+}
+
+function startFullRecording(){
+  if(!canvasStream) return;
+  fullChunks = [];
+  try {
+    fullRecorder = new MediaRecorder(canvasStream, { videoBitsPerSecond: 5000000 });
+    fullRecorder.ondataavailable = e => { if(e.data.size>0) fullChunks.push(e.data); };
+    fullRecorder.start();
+  } catch(e) { console.error(e); }
+}
+
+function stopFullRecording(){
+  return new Promise((resolve) => {
+    if(!fullRecorder || fullRecorder.state === 'inactive') { resolve(); return; }
+    fullRecorder.onstop = async () => {
+      const blob = new Blob(fullChunks, { type: fullRecorder.mimeType });
+      localStorage.setItem('booth_video_mime', fullRecorder.mimeType);
+      await saveFullVideoToDB(blob);
+      resolve();
+    };
+    fullRecorder.stop();
+  });
+}
+
+/* =====================
+   4. 主流程
+===================== */
+async function shoot(){
+  if(shooting) return;
+  shooting = true;
+  startBtn.style.display = 'none';
+
+  if(!stream) await startCamera();
+  
+  await sleep(500);
+  startFullRecording();
+
+  for(let i=0; i<3; i++) {
+    statusText.textContent = `動作 ${i+1}`;
+    setStepUI(i);
+    await sleep(3000); 
+    
+    await countdown(); 
+    
+    shutterFX();
+    statusBar.classList.add('recording');
+    statusText.textContent = "錄影中";
+    
+    const clipBlob = await recordClip(2500);
+    await saveClipToDB(clipBlob, i);
+    
+    statusBar.classList.remove('recording');
+  }
+  
+  msgTitle.textContent = '拍攝完成';
+  msgSub.textContent = '處理中...';
+  loading.classList.add('show');
+  
+  await stopFullRecording();
+
+  localStorage.setItem('photobooth_job', JSON.stringify({ done: true, time: Date.now() }));
+  await sleep(1000);
+  location.href = 'booth-export.html';
+}
+
+startBtn.onclick = async ()=>{
+  try{ await shoot(); }
+  catch(err){ console.error(err); alert('錯誤'); location.reload(); }
+};
+
+startCamera();
+
+(function(){
+  function setVH(){ document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px'); }
+  window.addEventListener('resize', setVH); setVH();
+})();
+</script>
+</body>
+</html>

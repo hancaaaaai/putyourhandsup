@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>What's in Your Hand?｜心理測驗</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* === 全域設定 === */
+    :root { --bg: #ffffff; --text: #333333; --main-blue: #9AE5FF; --hover-blue: #7bdfff; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: "Manrope", "Noto Sans TC", sans-serif; overscroll-behavior: none; touch-action: manipulation; }
+    * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    input { -webkit-user-select: text; user-select: text; }
+
+    /* RWD 容器 */
+    .outer { width: 100vw; height: 100vh; overflow-y: auto; overflow-x: hidden; display: flex; justify-content: center; align-items: center; }
+    .stage { width: 100%; max-width: 1200px; padding: 40px; position: relative; text-align: center; animation: fadeIn 0.5s ease; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .hidden { display: none !important; }
+
+    /* === 通用元件 === */
+    h1 { font-size: 42px; font-weight: 800; margin-bottom: 20px; }
+    h2 { font-size: 36px; font-weight: 900; margin-bottom: 28px; white-space: pre-line; color: #333; }
+    p { font-size: 24px; line-height: 1.6; color: var(--text); margin-bottom: 30px; }
+    .subtitle { font-size: 30px; font-weight: 900; color: var(--text); margin-bottom: 40px; }
+    
+    .quiz-header { text-align: left; width: 100%; max-width: 1000px; margin: 0 auto; }
+    .lead { font-size: 20px; color: #666; font-weight: 700; margin-bottom: 10px; display: block;}
+    .question-text { font-size: 42px; font-weight: 900; color: #333; margin-bottom: 40px; }
+
+    .btn { display: inline-block; padding: 16px 32px; border-radius: 50px; background: var(--main-blue); color: #1f2a33; border: none; text-decoration: none; font-weight: 900; font-size: 24px; cursor: pointer; box-shadow: 0 6px 0 rgba(0,0,0,.1); margin-top: 30px; transition: transform 0.1s, background 0.2s; }
+    .btn:hover { background: var(--hover-blue); transform: translateY(-1px); }
+    .btn:active { transform: translateY(1px); box-shadow: 0 3px 0 rgba(0,0,0,.1); }
+    .btn[disabled] { opacity: 0.5; pointer-events: none; background: #ddd; box-shadow: none; }
+    
+    /* === 題目選項 === */
+    .options-grid { display: flex; justify-content: center; align-items: flex-start; gap: 40px; width: 100%; margin: 0 auto 40px; flex-wrap: wrap; }
+    .option-card { display: flex; flex-direction: column; align-items: center; width: 300px; cursor: pointer; transition: transform 0.2s; }
+    .option-card:hover { transform: translateY(-5px); }
+    .visual-circle { width: 260px; height: 260px; background: var(--main-blue); border-radius: 50%; margin-bottom: 30px; overflow: hidden; position: relative; }
+    .visual-circle video, .visual-circle img { width: 100%; height: 100%; object-fit: cover; }
+    .opt-pill-btn { width: 100%; padding: 20px 10px; min-height: 80px; border: 6px solid var(--main-blue); border-radius: 40px; background: #fff; font-size: 24px; font-weight: 800; color: #333; display: flex; justify-content: center; align-items: center; text-align: center; transition: 0.2s; line-height: 1.3; }
+    .option-card:hover .opt-pill-btn { background: #e9f8ff; border-color: var(--hover-blue); }
+    .option-card:active .opt-pill-btn { transform: scale(0.98); }
+
+    /* === [修改點 1] 輸入頁面改為 Modal 彈窗樣式 === */
+    #view-input {
+      position: fixed; /* 固定定位，覆蓋在畫面上 */
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6); /* 半透明黑色背景 */
+      backdrop-filter: blur(5px); /* 背景模糊特效 */
+      z-index: 1000; /* 最上層 */
+      display: flex; justify-content: center; align-items: center;
+      padding: 0; /* 重置 padding */
+    }
+
+    /* 白色視窗容器 */
+    .modal-box {
+      background: #fff;
+      border: 8px solid var(--main-blue);
+      border-radius: 40px;
+      padding: 50px 60px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .input-label { font-size: 26px; font-weight: 800; color: #444; margin-bottom: 15px; display: block; }
+    .name-input { width: 100%; max-width: 320px; height: 80px; border: 6px solid var(--main-blue); border-radius: 45px; background: #fff; font-size: 32px; font-weight: 800; color: #333; text-align: center; outline: none; padding: 0 20px; margin-bottom: 30px; transition: border-color 0.2s; }
+    .name-input::placeholder { color: #ddd; font-weight: 700; font-size: 24px; }
+    .name-input:focus { border-color: #6bdaff; }
+    .gender-container { display: flex; gap: 30px; justify-content: center; margin-bottom: 30px; }
+    .gender-box { width: 110px; height: 110px; border: 6px solid var(--main-blue); border-radius: 35px; background: #fff; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: 900; color: var(--main-blue); cursor: pointer; transition: 0.2s; }
+    .gender-box:hover { transform: scale(1.05); }
+    .gender-box.selected { background: var(--main-blue); color: #fff; box-shadow: 0 8px 20px rgba(154, 229, 255, 0.6); }
+
+    /* 進度條 */
+    .progress-bar { width: 80%; max-width: 800px; height: 10px; background: #f0f0f0; margin: 20px auto 0; border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--main-blue); width: 0%; transition: width 0.3s; }
+
+    /* === 封面專用樣式 === */
+    .cover-stage { width: 100vw; height: 100vh; max-width: 100% !important; padding: 0 !important; display: flex; justify-content: center; align-items: center; background: #fff; overflow: hidden; }
+    .deco-logo { position: absolute; top: 40px; left: 40px; width: 150px; height: auto; z-index: 10; }
+    .deco-line { position: absolute; top: 50%; transform: translateY(-50%); width: 650px; height: auto; z-index: 0; pointer-events: none; }
+    .deco-line.left { left: -110px; }
+    .deco-line.right { right: -140px; }
+    .cover-content { position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 800px; }
+    .title-wrapper { position: relative; width: 80%; max-width: 700px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; }
+    .title-bg-anim { position: absolute; top: 10%; left: 30%; transform: translate(-50%, -50%); width: 40%; height: auto; z-index: 1; pointer-events: none; opacity: 1; }
+    .cover-title-img { position: relative; z-index: 2; width: 100%; height: auto; display: block; }
+    .cover-btn { background: #90e6ff; color: #333; width: 220px; padding: 18px 0; font-size: 26px; border-radius: 60px; box-shadow: none; }
+    .cover-btn:hover { background: #7bdfff; transform: scale(1.05); }
+
+    /* === Intro RPG 風格 === */
+    .rpg-stage { width: 100vw; height: 100vh; max-width: 100% !important; padding: 0 !important; position: relative; background-color: #fff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+    
+    /* 角色立繪 (強制置中放大版) */
+    .rpg-portrait {
+      position: absolute;
+      z-index: 5;
+      bottom: 10px; left: 50%; transform: translateX(-50%); right: auto;
+      width: 1000px !important; max-width: none;
+    }
+    .rpg-portrait video { width: 100% !important; height: auto; display: block; }
+    @media (max-width: 768px) {
+      .rpg-portrait { width: 450px !important; bottom: 200px; }
+    }
+
+    .rpg-box-container { position: relative; width: 90%; max-width: 1000px; margin-bottom: 40px; z-index: 10; }
+    .rpg-name-tag { position: absolute; top: -30px; left: 20px; background: var(--main-blue); color: #1f2a33; font-size: 28px; font-weight: 800; padding: 8px 30px; border-radius: 20px; z-index: 12; box-shadow: 0 4px 0 rgba(0,0,0,0.1); }
+    .rpg-dialogue-box { background: #ffffff; border: 8px solid var(--main-blue); border-radius: 40px; padding: 35px 50px; min-height: 200px; box-shadow: 0 10px 20px rgba(154, 229, 255, 0.3); display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; position: relative; cursor: pointer; }
+    .rpg-text { color: #333; font-size: 32px; font-weight: 700; line-height: 1.5; text-align: left; white-space: pre-wrap; }
+    .rpg-next-arrow { position: absolute; bottom: 25px; right: 40px; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 20px solid var(--main-blue); animation: bounce 1s infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(5px); opacity: 0.6; } }
+
+    @media (max-width: 768px) {
+      .rpg-dialogue-box { padding: 25px 30px; min-height: 180px; border-width: 6px; }
+      .rpg-text { font-size: 24px; }
+      .rpg-name-tag { font-size: 22px; top: -25px; left: 15px; padding: 5px 20px; }
+      .modal-box { padding: 30px; width: 95%; } /* 手機版 Modal 調整 */
+    }
+
+    /* === 結果頁樣式 === */
+    .result-container { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 50px; margin-top: -20px; }
+    .char-box { width: 100%; max-width: 750px; position: relative; }
+    .char-box video { width: 100%; height: auto; display: block; }
+    .subtitle-bubble { position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); background: #ffffff; border: 4px solid #333; border-radius: 30px; padding: 16px 32px; font-size: 28px; font-weight: 900; color: #333; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 10; box-shadow: 6px 6px 0 rgba(0,0,0,0.1); }
+    .subtitle-bubble.show { opacity: 1; transform: translateX(-50%); }
+    .subtitle-bubble.hidden-sub { opacity: 0; transform: translateX(-50%); }
+    .subtitle-bubble::after { content: ''; position: absolute; top: -12px; left: 50%; margin-left: -12px; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 12px solid #333; }
+    .result-info { text-align: center; display: flex; flex-direction: column; align-items: center; max-width: 600px; }
+    .res-header { font-size: 32px; font-weight: 800; color: #333; margin: 0 0 15px 0; }
+    .res-title { font-size: 100px; font-weight: 900; margin: 0 0 30px 0; line-height: 1.1; color: #333; }
+    .tags-wrap { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 50px; }
+    .tag-pill { border: 3px solid #333; border-radius: 60px; padding: 10px 30px; font-size: 22px; font-weight: 700; color: #333; background: transparent; }
+    .action-row { display: flex; gap: 50px; align-items: center; justify-content: center; }
+    .text-link { font-size: 26px; font-weight: 800; color: #333; cursor: pointer; text-decoration: none; border-bottom: 4px solid #333; padding-bottom: 5px; transition: opacity 0.2s; }
+    .text-link:hover { opacity: 0.7; }
+    @media (min-width: 768px) {
+      .result-container { flex-direction: row; text-align: left; align-items: flex-start; }
+      .result-info { align-items: flex-start; text-align: left; margin-top: 60px; }
+      .tags-wrap { justify-content: flex-start; } .action-row { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="outer">
+  
+  <div id="view-cover" class="stage cover-stage">
+    <img src="png/logo.png" class="deco-logo" alt="Logo">
+    <img src="png/line_left.png" class="deco-line left" alt="">
+    <img src="png/line_right.png" class="deco-line right" alt="">
+
+    <div class="cover-content">
+      <div class="title-wrapper">
+        <video src="video/主角_揮手.webm" class="title-bg-anim" autoplay loop muted playsinline></video>
+        <img src="png/封面標題.png" class="cover-title-img" alt="What's in Your Hand?">
+      </div>
+      <p class="subtitle">你的手語名字是甚麼？</p>
+      <button class="btn cover-btn" onclick="goToView('view-intro')">進入世界</button>
+    </div>
+  </div>
+
+  <div id="view-intro" class="stage rpg-stage hidden">
+    <div class="rpg-portrait">
+      <video src="video/主角_揮手.webm" autoplay loop muted playsinline></video>
+    </div>
+    <div class="rpg-box-container">
+      <div class="rpg-name-tag">SHOPKEEP</div> 
+      <div class="rpg-dialogue-box" onclick="nextLine()">
+        <div id="rpg-text-target" class="rpg-text"></div>
+        <div class="rpg-next-arrow"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-input" class="hidden">
+    <div class="modal-box">
+      <div style="margin-bottom: 20px;">
+        <label class="input-label">請輸入名字(綽號也可以)</label>
+        <input type="text" id="p-name" class="name-input" oninput="checkInput()">
+      </div>
+      <div>
+        <label class="input-label">生理性別</label>
+        <div class="gender-container">
+          <div class="gender-box" onclick="selectGender('male', this)">男</div>
+          <div class="gender-box" onclick="selectGender('female', this)">女</div>
+        </div>
+      </div>
+      <button id="btn-start" class="btn" disabled onclick="startStage1()">GOGO!</button>
+    </div>
+  </div>
+
+  <div id="view-quiz" class="stage hidden">
+    <div class="quiz-header">
+      <span id="quiz-lead" class="lead"></span>
+      <h2 id="quiz-q" class="question-text">題目載入中...</h2>
+    </div>
+    <div id="quiz-options" class="options-grid"></div>
+    <div class="progress-bar"><div id="quiz-progress" class="progress-fill"></div></div>
+  </div>
+
+  <div id="view-interlude" class="stage hidden">
+    <p id="interlude-text" style="font-size: 24px; white-space: pre-line; font-weight: 700;"></p>
+    <button id="interlude-btn" class="btn" onclick="startStage2()">繼續</button>
+  </div>
+
+  <div id="view-result" class="stage hidden">
+    <div class="result-container">
+      <div class="char-box">
+        <video id="res-video" autoplay loop muted playsinline></video>
+        <div id="subtitle-box" class="subtitle-bubble"></div>
+      </div>
+      <div class="result-info">
+        <p class="res-header"><span id="res-name">名字</span>! 你的手語名字是</p>
+        <h1 id="res-title" class="res-title">結果</h1>
+        <div id="res-tags" class="tags-wrap"></div>
+        <div class="action-row">
+          <div class="text-link" onclick="location.reload()">重來一次</div>
+          <a class="text-link" href="booth-preview.html">去玩拍貼</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // === 資料庫設定 (維持不變) ===
+  const DB = {
+    stage1: [
+      {
+        lead: '你走進熱鬧的廣場，看到一家五花八門的手套店，你不禁開始想．．．',
+        q: '「如果我的手有意識，他會穿什麼樣的衣服呢？」',
+        opts: [
+          {t:'小背包和登山帽，隨時去探險', k:'extravert'},
+          {t:'軟綿綿的毛衣，像雲朵一樣包裹手指', k:'introvert'},
+          {t:'俐落的皮衣外套，帥氣登場', k:'decisive'},
+        ]
+      },
+      {
+        lead: '繼續往前走，一個人向前問你。',
+        q: '「你的耳機裡聽著什麼音樂？」',
+        opts: [
+          {t:'風格獨特的獨立音樂', k:'analytic'},
+          {t:'2000年代經典不敗老歌', k:'caring'},
+          {t:'時下最流行的K-POP', k:'extravert'},
+        ]
+      },
+      {
+        lead: '接著，你看到前方一個人慌亂的比著手語。',
+        q: '「他似乎想表達什麼，但沒有人懂他，這時你會？」',
+        opts: [
+          {t:'自己好像幫不上忙，默默走掉', k:'introvert'},
+          {t:'在「動字動字」學到的手語能派上用場了！', k:'decisive'},
+          {t:'拿出手機輸入文字，幫他翻譯訊息', k:'analytic'},
+        ]
+      },
+      {
+        lead: '你感覺有點餓了，來到一家餐廳，排了很長的隊伍終於輪到你時。',
+        q: '「你原本想點的剛好賣完了，這時候你會想？」',
+        opts: [
+          {t:'好可惜！那換一個吃吃看吧', k:'caring'},
+          {t:'真掃興～想去別家店買了', k:'extravert'},
+          {t:'後面好多人．．．好尷尬．．．隨便點一個', k:'introvert'},
+        ]
+      },
+      {
+        lead: '當你吃飽準備離開時，牆上的門突然變成三道了！\n而每個門上都有一個神祕的手語符號。',
+        q: '「憑感覺選出你想推開的那一道門吧。」',
+        opts: [
+          {t:'直覺告訴我，冒險的路在A門！', k:'decisive'},
+          {t:'仔細觀察符號，B門最吸引我', k:'analytic'},
+          {t:'Ｃ門看起來最安全，應該不會錯', k:'caring'},
+        ]
+      }
+    ],
+    interludes: {
+      extravert: { text: "你推開門，耀眼的光線閃了你一下。\n當視線恢復，眼前是一個盛大的派對，\n音樂從地面震起，大家隨著音樂跳舞。\n有人衝著你比出「Hi！」的手語，\n也有人比出「一起玩吧！」「歡迎你」的動作。", btn: "加入派對" },
+      introvert: { text: "推開門後，你進入一個寧靜的花園，\n微光透過樹葉灑下斑駁光影，發出河水潺潺的聲音。\n幾個人安靜地在花園裡喝茶、看書。", btn: "進入花園" },
+      caring:    { text: "推開門，你進到一個巨大的空間，\n空間裡有很多光點，\n旁邊的人告訴你這是掌管居民情緒的檔案室，\n而每一個光點，都記錄著居民的心情。\n他遞給你一個空瓶，要你一起幫忙整理。", btn: "接住空瓶" },
+      decisive:  { text: "推開門，你走進冒險遊戲場景，\n這裡在考驗你的勇氣和決斷力。", btn: "前往冒險" },
+      analytic:  { text: "推開門，你來到一個工坊，\n牆上掛滿組件、線路與轉輪，\n一位師父遞給你工作服，請你幫忙。", btn: "開始研究" }
+    },
+    stage2: {
+      extravert: [
+        {q:'突然，一顆迪斯可球從天而降，打亂了舞台的節奏。\n「所有人都慌成一團，你第一反應是？」', opts:[{t:'把迪斯可球踢回天空，別影響我的派對！',k:'playful'}, {t:'開玩笑地說「這是我的歡迎禮嗎？」',k:'humorous'}, {t:'用手拍出節奏，把派對帶回正軌',k:'lively'}]},
+        {q:'派對恢復秩序，一位調酒師看向你，\n「要來一杯嗎？」', opts:[{t:'在場本月壽星我來請客！',k:'generous'}, {t:'來一份最酷的今日特調',k:'playful'}, {t:'給我十杯，今晚不醉不歸！',k:'humorous'}]},
+        {q:'派對來到高潮，每個人要來到台前 solo 。\n「你想做出什麼表演？」', opts:[{t:'模仿短影片舞蹈',k:'lively'}, {t:'選一首名曲邀請大家跟著唱',k:'generous'}, {t:'講一個廢到笑的冷笑話',k:'playful'}]},
+        {q:'派對到了尾聲，音樂和燈光逐漸柔和，\n「在不打擾氣氛的情況下，你想怎麼做？」', opts:[{t:'偷偷到點心區想要吃回本',k:'humorous'}, {t:'馬上發一篇限時動態記錄',k:'lively'}, {t:'隨著音樂搖擺，放鬆心情',k:'generous'}]},
+        {q:'派對結束，精彩的一整天\n「今天哪個部分讓你印象最深刻？」', opts:[{t:'意外來到這個超棒的派對，下次還要',k:'playful'}, {t:'solo時間大家的即興演出',k:'humorous'}, {t:'結交了很多不同的新朋友',k:'lively'}]}
+      ],
+      introvert: [
+        {q:'剛踏入花園，畫面美不勝收\n「你會怎麼形容當下的心情？」', opts:[{t:'舒服到想要直接躺下來放空',k:'calm'}, {t:'像一幅畫一樣，想帶回家收藏',k:'gentle'}, {t:'屬於我的秘境，不能讓別人發現',k:'steady'}]},
+        {q:'此時，一個熱心的居民走向前表示想帶你參加花園導覽，\n「需要為你講解嗎?」', opts:[{t:'「沒關係，我自己看就好，謝謝」',k:'shy'}, {t:'「你是這邊的工作人員嗎？」',k:'calm'}, {t:'「好啊，那就麻煩你了～」',k:'gentle'}]},
+        {q:'走著走著，你發現一株從未見過的奇異植物，\n「你會怎麼做？」', opts:[{t:'可能有毒，還是不要靠近比較好',k:'steady'}, {t:'拍照上傳限時動態，打上：０',k:'shy'}, {t:'仔細觀察他的外型',k:'calm'}]},
+        {q:'你開始覺得走到有點累了，\n「你想?」', opts:[{t:'戴起耳機享受片刻安靜',k:'gentle'}, {t:'吃塊餅乾充電，繼續上路',k:'steady'}, {t:'再忍耐一下，回家就可以好好休息',k:'shy'}]},
+        {q:'休息完後準備離開，你看向整個花園\n「你想用什麼方式紀錄這天？」', opts:[{t:'默默記在心裡，享受當下',k:'calm'}, {t:'發一篇圖文搭配的社群貼文',k:'gentle'}, {t:'回去和朋友口頭分享',k:'steady'}]}
+      ],
+      caring: [
+        {q:'剛踏入這個地方，四周的光點慢慢漂浮起來，\n「你會怎麼反應？」', opts:[{t:'伸手輕輕碰觸，想知道它們的觸感',k:'soft'}, {t:'被光點包圍太美了，心情都好了起來',k:'kind'}, {t:'想辦法收集散亂的光點，恢復秩序',k:'patient'}]},
+        {q:'有個光點突然變得灰暗，看起來像是在低落，\n「你會怎麼做？」', opts:[{t:'所有情緒都有存在的意義，先裝起來不管他',k:'upbeat'}, {t:'給他一點時間自己冷靜下來',k:'soft'}, {t:'做鬼臉或一切方式想辦法讓他開心起來！',k:'kind'}]},
+        {q:'突然一位居民不小心把光點撞得滿天飛，\n「你會？」', opts:[{t:'安慰並請他收拾乾淨',k:'patient'}, {t:'邊笑邊說「這樣其實也很漂亮」',k:'upbeat'}, {t:'一顆一顆幫忙撿回去',k:'soft'}]},
+        {q:'一顆特別亮的光點飄到你手中，它好像有些故事想讓你知道，\n「你覺得它要說什麼？」', opts:[{t:'感人的溫馨故事',k:'kind'}, {t:'尚未完成的夢想',k:'patient'}, {t:'克服困難的方法',k:'upbeat'}]},
+        {q:'結束整理後，你看著整理完的罐子\n「你對哪顆光點印象最深刻？」', opts:[{t:'平平無奇，很安靜的那顆',k:'soft'}, {t:'一閃一閃，像在笑的那顆',k:'kind'}, {t:'顏色最溫暖，讓人覺得安心的那顆',k:'patient'}]}
+      ],
+      decisive: [
+        {q:'眼前出現三條道路，一條充滿霧氣、一條燈光亮得刺眼、一條安靜的詭異。\n「你會怎麼走？」', opts:[{t:'選最危險的那條，我天生喜歡冒險',k:'brave'}, {t:'走自己覺得順眼的那條，不聽別人意見',k:'confident'}, {t:'分析哪條最有勝算，決定後就不回頭',k:'decisive'}]},
+        {q:'前方突然出現一個充滿謎題的門。\n「你會？」', opts:[{t:'另找道路，也許有其他出口',k:'independent'}, {t:'指揮隊友分工完成',k:'brave'}, {t:'相信自己，我獨自完成關卡',k:'confident'}]},
+        {q:'在往前走，遇到一隻卡關的居民求助，他請你幫忙按下開關，\n「你會？」', opts:[{t:'可能是陷阱，無視他',k:'decisive'}, {t:'教他怎麼開，然後走回自己的路',k:'independent'}, {t:'別人有需要，二話不說直接幫忙',k:'brave'}]},
+        {q:'終點出現一個會說話的寶箱，它說：「只有回答正確的人能打開我。」\n「你覺得它想聽什麼？」', opts:[{t:'「我就是鑰匙。」',k:'confident'}, {t:'「我要靠自己的力量打開你」',k:'decisive'}, {t:'「我不需要寶藏，我只需要勝利。」',k:'independent'}]},
+        {q:'挑戰結束，獲得一枚徽章，你會選擇？', opts:[{t:'最亮的那顆，無所畏懼',k:'brave'}, {t:'最大的那顆，胸有成竹',k:'confident'}, {t:'最硬的那顆，意志堅強',k:'decisive'}]}
+      ],
+      analytic: [
+        {q:'到了工作崗位，一切都很新鮮。\n「你會先觀察什麼？」', opts:[{t:'其他人的工作模式',k:'sharp'}, {t:'桌上散落的零件和工具',k:'careful'}, {t:'工坊的格局動線',k:'smart'}]},
+        {q:'小組開始分配任務，\n「你會擔任什麼角色？」', opts:[{t:'安排事項，規劃時程',k:'cautious'}, {t:'提出創新的點子',k:'sharp'}, {t:'負責溝通，激勵團隊',k:'careful'}]},
+        {q:'一位夥伴拿出一個半完成的裝置，希望你協助完成，\n「在開始之前，你會向對方詢問什麼問題？」', opts:[{t:'「你希望這個裝置最後能達成什麼效果？」',k:'smart'}, {t:'「確定每個零件都還在，沒有缺漏？」',k:'cautious'}, {t:'「這個裝置的運作原理是什麼？」',k:'sharp'}]},
+        {q:'一個裝置突然自己啟動，零件開始亂轉，\n「你會？」', opts:[{t:'立刻按下緊急開關，避免更多混亂',k:'careful'}, {t:'自己發現問題源頭，修正錯誤',k:'smart'}, {t:'馬上找工坊內專業人士幫助',k:'cautious'}]},
+        {q:'任務完成，獎勵你一個工藝品，可以獲得強大力量，\n「你會選擇哪個？」', opts:[{t:'看穿任何人的想法',k:'sharp'}, {t:'解析錯誤的訊息或事件',k:'careful'}, {t:'預知未來的可能',k:'smart'}]}
+      ]
+    }
+  };
+
+  const KEY_MAP = {
+    extravert:{playful:'淘氣',humorous:'幽默',lively:'活潑',generous:'大方'},
+    introvert:{calm:'冷靜',gentle:'文靜',steady:'沉穩',shy:'害羞'},
+    caring:{soft:'溫柔',kind:'善良',patient:'耐心',upbeat:'樂觀'},
+    decisive:{brave:'勇敢',confident:'自信',decisive:'果斷',independent:'獨立'},
+    analytic:{sharp:'敏銳',careful:'細心',smart:'聰明',cautious:'謹慎'}
+  };
+
+  const TAG_MAP = {
+    '淘氣女': ['把日常變好玩的人物', '有點壞但可愛', '如果沒有你，這群人會安靜30分鐘', '你這個小淘氣'],
+    '淘氣男': ['把日常變好玩的人物', '有點壞但可愛', '如果沒有你，這群人會安靜30分鐘', '你這個小淘氣'],
+    'default': ['手語大師', '心靈手巧', '獨一無二的靈魂']
+  };
+
+  let state = {
+    name: '', gender: '',
+    scores: { extravert:0, introvert:0, decisive:0, analytic:0, caring:0 },
+    currentStage: 1, qIndex: 0, mainType: 'extravert', traitScores: {} 
+  };
+
+  // === Intro 變數 ===
+  const INTRO_SCRIPT = [
+    "你好...",
+    "你手上的氛圍很特別欸...",
+    "你是新來的吧？",
+    "我想向你介紹我的幾個朋友",
+    "他們超會看人（的手）",
+    "這裡的人，名字可不是用講的",
+    "而是......用「手」取的",
+    "準備好了嗎？",
+    "我們開始吧！"
+  ];
+  let introIndex = 0;
+  let isTyping = false;
+  let typeTimer = null;
+
+  function goToView(viewId) {
+    document.querySelectorAll('.stage').forEach(el => el.classList.add('hidden'));
+    const target = document.getElementById(viewId);
+    if(target) target.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    if (viewId === 'view-intro') initIntro();
+  }
+
+  function initIntro() {
+    introIndex = 0;
+    renderRPGDialogue();
+  }
+
+  // === RPG 對話渲染函式 ===
+  function renderRPGDialogue() {
+    const textBox = document.getElementById('rpg-text-target');
+    const fullText = INTRO_SCRIPT[introIndex];
+    textBox.textContent = '';
+    
+    let charIndex = 0;
+    isTyping = true;
+    if(typeTimer) clearInterval(typeTimer);
+
+    typeTimer = setInterval(() => {
+      textBox.textContent += fullText[charIndex];
+      charIndex++;
+      if (charIndex >= fullText.length) {
+        clearInterval(typeTimer);
+        isTyping = false;
+      }
+    }, 50); 
+  }
+
+  function nextLine() {
+    const textBox = document.getElementById('rpg-text-target');
+    
+    if (isTyping) {
+      clearInterval(typeTimer);
+      isTyping = false;
+      textBox.textContent = INTRO_SCRIPT[introIndex];
+      return;
+    }
+    
+    // [修改點 3] 最後一行講完，不要隱藏 intro，而是直接顯示 input modal
+    if (introIndex >= INTRO_SCRIPT.length - 1) {
+      document.getElementById('view-input').classList.remove('hidden');
+      return;
+    }
+    introIndex++;
+    renderRPGDialogue(); 
+  }
+
+  function checkInput() {
+    const name = document.getElementById('p-name').value.trim();
+    const btn = document.getElementById('btn-start');
+    if (name && state.gender) btn.removeAttribute('disabled');
+    else btn.setAttribute('disabled', 'true');
+  }
+
+  function selectGender(gender, btn) {
+    state.gender = gender;
+    document.querySelectorAll('.gender-box').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    checkInput();
+  }
+
+  function startStage1() {
+    // [修改點 4] 按下 GOGO 後，同時隱藏 Intro 和 Input Modal
+    document.getElementById('view-intro').classList.add('hidden');
+    document.getElementById('view-input').classList.add('hidden');
+    
+    state.name = document.getElementById('p-name').value.trim();
+    state.currentStage = 1; state.qIndex = 0;
+    state.scores = { extravert:0, introvert:0, decisive:0, analytic:0, caring:0 };
+    renderQuestion();
+    
+    // 顯示測驗頁
+    document.getElementById('view-quiz').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  function renderQuestion() {
+    let list = (state.currentStage === 1) ? DB.stage1 : (DB.stage2[state.mainType] || DB.stage2['extravert']);
+    
+    if (state.qIndex >= list.length) {
+      (state.currentStage === 1) ? finishStage1() : finishStage2();
+      return;
+    }
+
+    const item = list[state.qIndex];
+    document.getElementById('quiz-lead').textContent = item.lead || ''; 
+    document.getElementById('quiz-q').textContent = item.q;
+    
+    const optsDiv = document.getElementById('quiz-options');
+    optsDiv.innerHTML = ''; 
+
+    item.opts.forEach(opt => {
+      const card = document.createElement('div');
+      card.className = 'option-card';
+      card.onclick = () => handleVote(opt.k);
+
+      const visual = document.createElement('div');
+      visual.className = 'visual-circle';
+      // visual.innerHTML = `<video src="..."></video>`; 
+
+      const btnText = document.createElement('div');
+      btnText.className = 'opt-pill-btn';
+      btnText.textContent = opt.t;
+
+      card.appendChild(visual);
+      card.appendChild(btnText);
+      optsDiv.appendChild(card);
+    });
+
+    const percent = ((state.qIndex) / list.length) * 100;
+    document.getElementById('quiz-progress').style.width = percent + '%';
+  }
+
+  function handleVote(key) {
+    if (state.currentStage === 1) {
+      if (state.scores[key] !== undefined) state.scores[key]++;
+    } else {
+      state.traitScores[key] = (state.traitScores[key] || 0) + 1;
+    }
+    state.qIndex++;
+    renderQuestion();
+  }
+
+  function finishStage1() {
+    let best = 'extravert', max = -1;
+    for (let k in state.scores) {
+      if (state.scores[k] > max) { max = state.scores[k]; best = k; }
+    }
+    state.mainType = best;
+    const info = DB.interludes[best] || DB.interludes['extravert'];
+    document.getElementById('interlude-text').textContent = info.text;
+    document.getElementById('interlude-btn').textContent = info.btn;
+    goToView('view-interlude');
+  }
+
+  function startStage2() {
+    state.currentStage = 2; state.qIndex = 0; state.traitScores = {}; 
+    renderQuestion();
+    goToView('view-quiz');
+  }
+
+  function finishStage2() {
+    // === 強制指定為「淘氣女」 ===
+    const traitName = "淘氣";
+    const genderSuffix = "女";
+    const finalTitle = "淘氣女"; 
+    // ========================
+
+    const videoEl = document.getElementById('res-video');
+    if(videoEl) {
+      videoEl.src = `video/${finalTitle}_結果頁.webm`;
+      setupSubtitles(videoEl, traitName, genderSuffix);
+    }
+
+    document.getElementById('res-name').textContent = state.name;
+    document.getElementById('res-title').textContent = finalTitle;
+
+    const tagContainer = document.getElementById('res-tags');
+    tagContainer.innerHTML = ''; 
+    const tags = TAG_MAP[finalTitle] || TAG_MAP['default'];
+    tags.forEach(text => {
+      const div = document.createElement('div');
+      div.className = 'tag-pill';
+      div.textContent = text;
+      tagContainer.appendChild(div);
+    });
+
+    localStorage.setItem('photobooth_template', JSON.stringify({
+      role: finalTitle, image: '心理測驗模板.jpg'
+    }));
+    goToView('view-result');
+  }
+
+  function setupSubtitles(video, trait, gender) {
+    const subBox = document.getElementById('subtitle-box');
+    const cues = [
+      { start: 0.0, end: 1, text: "大家好！" },
+      { start: 1, end: 1.5, text: "我的" },
+      { start: 1.5, end: 4.0, text: "手語名字是..." },
+      { start: 4.0, end: 7.5, text: trait }, 
+      { start: 7.5, end: 10.0, text: gender }
+    ];
+
+    video.ontimeupdate = null;
+    video.ontimeupdate = () => {
+      const t = video.currentTime;
+      const currentCue = cues.find(c => t >= c.start && t < c.end);
+      if (currentCue) {
+        subBox.textContent = currentCue.text;
+        subBox.classList.remove('hidden-sub');
+        subBox.classList.add('show');
+      } else {
+        subBox.classList.remove('show');
+        subBox.classList.add('hidden-sub');
+      }
+      if (t < 0.1) {
+         subBox.classList.remove('show');
+         subBox.classList.add('hidden-sub');
+      }
+    };
+  }
+</script>
+
+</body>
+</html>

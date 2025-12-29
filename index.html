@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUT YOUR HANDS UP - Public Signs</title>
+    <style>
+        /* --- 基礎設定 --- */
+        body {
+            cursor: none;
+            margin: 0; padding: 0;
+            background-color: #ffffff;
+            font-family: 'Helvetica Neue', Arial, 'Microsoft JhengHei', sans-serif;
+            overflow-x: hidden; 
+            width: 100vw;
+            color: #3F4243; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        a, button { cursor: none; }
+
+        /* --- 頂部 Logo --- */
+        .top-bar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            padding: 20px 40px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 100;
+            color: #3F4243; 
+            pointer-events: none; 
+            box-sizing: border-box;
+        }
+        .nav-logo { 
+            pointer-events: auto; 
+            display: flex; align-items: center; 
+        }
+        .nav-logo img {
+            height: 60px; 
+            width: auto;
+            object-fit: contain;
+            margin-left: -10px; 
+            margin-top: -5px;
+        }
+        
+        /* --- 下方懸浮選單 --- */
+        .bottom-nav {
+            position: fixed; 
+            bottom: 40px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            z-index: 200;
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.05);
+            pointer-events: auto;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #555;
+            cursor: none; 
+            transition: all 0.3s ease;
+            text-decoration: none; 
+            display: flex; align-items: center; justify-content: center;
+            white-space: nowrap;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background-color: #3F4243; 
+            color: #fff;
+        }
+
+        /* =========================================
+           水平滾動核心結構
+           ========================================= */
+        #scroll-container {
+            height: 500vh; 
+            position: relative;
+        }
+
+        #sticky-viewport {
+            position: sticky;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; 
+        }
+
+        #horizontal-track {
+            display: flex;
+            width: 500vw; 
+            height: 100%;
+            will-change: transform; 
+        }
+
+        .panel {
+            width: 100vw;
+            height: 100vh;
+            flex-shrink: 0; 
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* --- Panel 1: 視差首頁 --- */
+        #panel-hero { perspective: 1000px; }
+        #intro-text {
+            position: absolute;
+            top: 18%; left: 18%; 
+            font-size: 24px; font-weight: bold; 
+            color: #3F4243; 
+            z-index: 2; pointer-events: none; letter-spacing: 1.5px; white-space: nowrap; 
+        }
+
+        /* =========================================
+           Panel 2: 專題介紹 (更新版)
+           ========================================= */
+        #panel-about {
+            background-color: #ffffff; 
+            overflow: hidden;
+        }
+
+        /* 垂直滾動容器 */
+        .about-scroll-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+        .about-scroll-container::-webkit-scrollbar { display: none; }
+
+        .about-content-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 50px 150px 50px; 
+            display: flex;
+            flex-direction: column;
+            gap: 120px; 
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: #3F4243;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        .section-desc {
+            font-size: 16px;
+            line-height: 2;
+            color: #666;
+            max-width: 500px;
+        }
+
+        /* 第一區：什麼是動字動字 */
+        .about-section-1 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 50px;
+        }
+        .as1-text { flex: 1; }
+        .as1-img { 
+            flex: 1; 
+            height: 400px; 
+            overflow: hidden; 
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .as1-img img {
+            width: 100%; height: 120%; 
+            object-fit: cover;
+            transition: transform 0.1s linear;
+        }
+
+        /* 第二區：為什麼要被看見 */
+        .about-section-2 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 60px;
+        }
+        .as2-img {
+            flex: 1;
+            background-color: #f0f0f0;
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .as2-img img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .as2-text-group { flex: 1; }
+        
+        .issue-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .issue-capsule {
+            background-color: #CDF5FF; 
+            color: #3F4243;
+            padding: 20px;
+            border-radius: 12px;
+            font-weight: 800;
+            text-align: center;
+            font-size: 15px;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: none;
+        }
+        .issue-capsule:hover {
+            transform: scale(1.1) rotate(-2deg);
+            background-color: #9FECFF;
+        }
+        .issue-capsule:nth-child(even):hover {
+            transform: scale(1.1) rotate(2deg);
+        }
+
+        /* 第三區：誤解 (翻轉卡片) */
+        .about-section-3 {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; 
+        }
+        .myth-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            margin-top: 50px;
+        }
+        .flip-card {
+            background-color: transparent;
+            width: 100%;
+            height: 300px;
+            perspective: 1000px; 
+            cursor: none;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        .flip-card-front {
+            background-color: #f9f9f9;
+            color: #3F4243;
+            border: 2px solid #eee;
+        }
+        .myth-icon { font-size: 40px; margin-bottom: 20px; opacity: 0.5; }
+        .myth-text { font-size: 18px; font-weight: bold; }
+        .click-hint { 
+            margin-top: 20px; font-size: 12px; color: #999; 
+            border: 1px solid #ddd; padding: 5px 15px; border-radius: 20px;
+        }
+        .flip-card-back {
+            background-color: #3F4243;
+            color: #fff;
+            transform: rotateY(180deg);
+        }
+        .truth-title { font-size: 14px; color: #9FECFF; margin-bottom: 10px; font-weight: bold; letter-spacing: 2px;}
+        .truth-text { font-size: 16px; line-height: 1.6; }
+
+        /* 第四區：我們希望 (改用圖標拆解圖) */
+        .about-section-4 {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* 靠右 */
+            text-align: right;
+        }
+        .as4-content {
+            max-width: 600px;
+            margin-bottom: 60px;
+        }
+        
+        .breakdown-wrapper {
+            width: 100%;
+            max-width: 800px; /* 限制最大寬度 */
+            height: 400px;
+            background-color: #e0e0e0; /* 灰色背景 */
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        /* 佔位文字 (當還沒有放圖時顯示) */
+        .breakdown-wrapper::after {
+            content: '動態圖標拆解圖 (Placeholder)';
+            color: #999;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .breakdown-img {
+            width: 100%; height: 100%; object-fit: cover;
+            opacity: 0.8; /* 暫時讓它半透明 */
+        }
+
+        /* 第五區：手語小知識 (新) */
+        .about-section-5 {
+            margin-top: 100px;
+            width: 100%;
+        }
+        .knowledge-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .k-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .k-card:hover {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-color: #9FECFF;
+        }
+        .k-header {
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fdfdfd;
+        }
+        .k-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #3F4243;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .k-icon { font-size: 24px; }
+        .k-arrow {
+            font-size: 24px; color: #ccc; transition: transform 0.3s;
+        }
+        
+        .k-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            background: #fff;
+        }
+        .k-content {
+            padding: 0 30px 30px 30px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #666;
+        }
+        
+        /* 展開狀態 */
+        .k-card.active .k-body {
+            max-height: 300px; /* 足夠放下內容的高度 */
+        }
+        .k-card.active .k-arrow {
+            transform: rotate(180deg);
+            color: #9FECFF;
+        }
+        .k-card.active {
+            border-left: 5px solid #9FECFF;
+        }
+
+
+        /* RWD */
+        @media (max-width: 900px) {
+            .about-section-1, .about-section-2 { flex-direction: column; }
+            .myth-container { flex-direction: column; }
+            .flip-card { height: 200px; margin-bottom: 20px; }
+            .breakdown-wrapper { height: 250px; }
+        }
+
+
+        /* --- Panel 3: 圖標總攬 --- */
+        #panel-overview {
+            background-color: #ffffff;
+            overflow-y: auto; 
+            padding: 100px 50px 100px 50px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        #panel-overview::-webkit-scrollbar { display: none; }
+
+        .overview-wrapper {
+            width: 100%;
+            max-width: 1400px;
+            padding-bottom: 100px;
+        }
+
+        .category-section { margin-bottom: 60px; }
+
+        .category-title {
+            font-size: 24px; font-weight: bold; color: #3F4243; 
+            margin-bottom: 30px; padding-left: 15px; border-left: 5px solid #3F4243; 
+        }
+
+        .icon-grid { display: flex; flex-wrap: wrap; gap: 40px; }
+
+        .icon-item {
+            display: flex; flex-direction: column; align-items: center;
+            width: 140px; transition: transform 0.3s ease; cursor: none; 
+        }
+        .icon-item:hover { transform: translateY(-5px); }
+        .icon-item:active { transform: scale(0.95); }
+
+        .icon-frame {
+            width: 140px; height: 140px; background-color: #ffffff; 
+            border: 1px solid #f0f0f0; border-radius: 12px; overflow: hidden;
+            margin-bottom: 15px; position: relative;
+        }
+        .icon-frame img {
+            width: 100%; height: 100%; object-fit: contain; padding: 10px;
+            box-sizing: border-box; transition: filter 0.3s;
+        }
+        .icon-item:hover .icon-frame img { filter: grayscale(0%); }
+        .icon-name { font-size: 14px; color: #666; font-weight: 500; text-align: center; }
+
+        /* --- Panel 4: 下載專區 --- */
+        #panel-download {
+            background-color: #f4f4f4;
+            display: flex; justify-content: center; align-items: center; padding: 50px;
+        }
+
+        .download-container {
+            width: 100%; max-width: 1200px; height: 80vh;
+            background: #fff; border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+            display: flex; overflow: hidden;
+        }
+
+        .dl-list {
+            width: 300px; border-right: 1px solid #eee;
+            overflow-y: auto; padding: 20px 0;
+        }
+
+        .dl-item {
+            padding: 15px 30px; display: flex; align-items: center; gap: 15px;
+            cursor: none; transition: background 0.2s;
+        }
+        .dl-item:hover, .dl-item.active { background-color: #f9f9f9; }
+        .dl-item.active { border-right: 4px solid #3F4243; }
+        .dl-item img { width: 40px; height: 40px; object-fit: contain; }
+        .dl-item span { font-weight: 700; color: #3F4243; }
+
+        .dl-editor {
+            flex: 1; padding: 40px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
+        }
+
+        .preview-box {
+            width: 400px; height: 400px; border: 2px dashed #ddd; border-radius: 20px;
+            display: flex; justify-content: center; align-items: center; margin-bottom: 40px;
+            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .preview-box img, .preview-box svg { width: 80%; height: 80%; object-fit: contain; }
+
+        .color-control-group {
+            display: flex; flex-direction: column; gap: 15px;
+            width: 100%; max-width: 300px; margin-bottom: 20px;
+        }
+        .color-row {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #f9f9f9; padding: 10px 20px; border-radius: 50px;
+        }
+        .color-label { font-weight: 700; font-size: 14px; color: #555; }
+        input[type="color"] {
+            width: 30px; height: 30px; border: none; padding: 0; 
+            border-radius: 50%; overflow: hidden; cursor: none; background: none;
+        }
+        .reset-btn {
+            background: transparent; border: 1px solid #ddd; color: #888;
+            padding: 8px 16px; border-radius: 20px; font-size: 12px;
+            cursor: none; transition: 0.2s; align-self: center;
+        }
+        .reset-btn:hover { background: #eee; color: #333; }
+
+        .action-btns { display: flex; gap: 20px; margin-top: 10px; }
+        .dl-btn {
+            background: #3F4243; color: #fff; padding: 15px 40px; border-radius: 30px;
+            font-weight: bold; font-size: 16px; border: none; cursor: none; transition: all 0.3s;
+        }
+        .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .dl-btn.outline { background: transparent; color: #3F4243; border: 2px solid #3F4243; }
+        .dl-btn.outline:hover { background: #3F4243; color: #fff; }
+
+        /* --- Panel 5: 視覺規範手冊 --- */
+        #panel-manual {
+            background-color: #ffffff;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            perspective: 1500px; overflow: hidden;
+        }
+        .manual-container {
+            position: relative; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; width: 100%; height: 100%; z-index: 10;
+        }
+        .download-link {
+            position: absolute; top: 80px; 
+            text-decoration: none; font-weight: bold; color: #3F4243;
+            border-bottom: 2px solid #9FECFF; transition: 0.3s;
+            padding-bottom: 2px; cursor: none; font-size: 18px; z-index: 50;
+        }
+        .download-link:hover { background: #9FECFF; color: #000; }
+
+        .book {
+            position: relative; width: 0; height: 450px; 
+            transform-style: preserve-3d; margin: 0 auto;
+        }
+        .page {
+            position: absolute; top: 0; left: 0; width: 800px; height: 100%;
+            background-color: #ffffff; transform-origin: left center;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-style: preserve-3d;
+            box-shadow: inset 20px 0 50px rgba(0,0,0,0.05), 0 5px 20px rgba(0,0,0,0.1);
+            border-radius: 2px; display: flex; justify-content: center; align-items: center;
+            cursor: grab;
+        }
+        .page.grabbing { cursor: grabbing; transition: none !important; }
+        .page img {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 2px; 
+            pointer-events: none; backface-visibility: hidden; 
+        }
+        .page.flipped {
+            transform: rotateY(-180deg);
+            box-shadow: inset -20px 0 50px rgba(0,0,0,0.05), 0 5px 20px rgba(0,0,0,0.05);
+        }
+        .page-indicator { margin-top: 40px; font-weight: bold; color: #aaa; letter-spacing: 2px; }
+
+        /* --- 影片彈窗 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(63, 66, 67, 0.85); backdrop-filter: blur(8px);
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #fff; padding: 40px; border-radius: 24px;
+            max-width: 800px; width: 90%; position: relative;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .btn-close-modal {
+            position: absolute; top: 20px; right: 20px; background: #f0f0f0; border: none;
+            width: 40px; height: 40px; border-radius: 50%; font-size: 24px; color: #3F4243;
+            display: flex; justify-content: center; align-items: center; cursor: none; transition: 0.2s;
+        }
+        .btn-close-modal:hover { background: #3F4243; color: #fff; transform: rotate(90deg); }
+        .modal-video-wrap {
+            width: 100%; aspect-ratio: 16/9; background: #000;
+            border-radius: 12px; overflow: hidden; margin-bottom: 20px;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+        .modal-title { font-size: 32px; font-weight: 900; color: #3F4243; margin: 0; }
+        .modal-desc { color: #888; font-size: 16px; margin-top: 10px; }
+
+        /* --- 通用設定 --- */
+        .typing-cursor {
+            display: inline-block; width: 2px; height: 1em; background-color: #3F4243; 
+            margin-left: 5px; vertical-align: middle; animation: blink 0.8s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .card {
+            position: absolute; background-color: #ffffff; 
+            border: 0.5px solid #3F4243; border-radius: 12px;
+            overflow: hidden; display: flex; justify-content: center; align-items: center;
+            will-change: transform; transform: translate3d(0, 0, 0); backface-visibility: hidden; 
+        }
+        .card img {
+            width: 100%; height: 100%; object-fit: contain; padding: 10px;       
+            transition: transform 0.5s; image-rendering: -webkit-optimize-contrast;
+        }
+        .card:hover { z-index: 50 !important; box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; filter: blur(0) !important; }
+        .card:hover img { transform: scale(1.1); }
+        .layer-bg { opacity: 0.7; z-index: 1; filter: blur(2px); } 
+        #card-1 { top: 10%; left: 5%; width: 100px; height: 100px; }
+        #card-2 { top: 15%; left: 85%; width: 110px; height: 110px; }
+        #card-3 { top: 80%; left: 10%; width: 120px; height: 120px; }
+        #card-4 { top: 85%; left: 80%; width: 100px; height: 100px; }
+        #card-5 { top: 5%; left: 45%; width: 90px; height: 90px; }
+        #card-15 { top: 90%; left: 30%; width: 115px; height: 115px; }
+        .layer-mid { z-index: 5; }
+        #card-6 { top: 25%; left: 20%; width: 160px; height: 160px; }
+        #card-7 { top: 20%; left: 65%; width: 180px; height: 180px; }
+        #card-8 { top: 60%; left: 15%; width: 170px; height: 170px; }
+        #card-9 { top: 65%; left: 70%; width: 160px; height: 160px; }
+        #card-10 { top: 45%; left: 85%; width: 150px; height: 150px; }
+        #card-16 { top: 38%; left: 92%; width: 140px; height: 140px; }
+        .layer-fg { z-index: 10; } 
+        #card-11 { top: 35%; left: 10%; width: 220px; height: 220px; }
+        #card-12 { top: 55%; left: 55%; width: 240px; height: 240px; }
+        #card-13 { top: 30%; left: 45%; width: 200px; height: 200px; }
+        #card-14 { top: 75%; left: 40%; width: 190px; height: 190px; }
+        #card-17 { top: 5%; left: 72%; width: 180px; height: 180px; }
+        
+        #fake-cursor {
+            position: fixed; top: 0; left: 0; width: 64px; height: 64px; pointer-events: none; z-index: 9999;
+            will-change: transform; 
+        }
+        #fake-cursor-img {
+            width: 100%; height: 100%;
+            background-image: url('cursor.png'); 
+            background-size: contain; background-repeat: no-repeat;
+            transform-origin: center 80%; animation: sway 1s ease-in-out infinite alternate;
+        }
+        #fake-cursor.is-clicking #fake-cursor-img {
+            background-image: url('cursor-click.png'); animation: none; transform: rotate(-5deg); 
+        }
+        @keyframes sway { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="nav-logo">
+            <img src="png/logo.png" alt="PYHU Logo">
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-btn active" onclick="scrollToPage(0)">首頁</button>
+        <button class="nav-btn" onclick="scrollToPage(1)">專題介紹</button>
+        <button class="nav-btn" onclick="scrollToPage(2)">圖標總攬</button>
+        <button class="nav-btn" onclick="scrollToPage(3)">下載圖標</button>
+        <button class="nav-btn" onclick="scrollToPage(4)">視覺規範</button>
+        <a class="nav-btn" href="quiz.html">心理測驗</a>
+    </div>
+
+    <div id="scroll-container">
+        <div id="sticky-viewport">
+            <div id="horizontal-track">
+                
+                <section class="panel" id="panel-hero">
+                    <div id="intro-text" data-speed="0.01">
+                        <span id="hero-typewriter"></span><span class="typing-cursor"></span>
+                    </div>
+                    <div class="card layer-bg" id="card-1" data-speed="-0.02"><img src="gif/月台.gif"></div>
+                    <div class="card layer-bg" id="card-2" data-speed="-0.03"><img src="gif/海關.gif"></div>
+                    <div class="card layer-bg" id="card-3" data-speed="-0.02"><img src="gif/女廁.gif"></div>
+                    <div class="card layer-bg" id="card-4" data-speed="-0.04"><img src="gif/男廁.gif"></div>
+                    <div class="card layer-bg" id="card-5" data-speed="-0.03"><img src="gif/廁所.gif"></div>
+                    <div class="card layer-bg" id="card-15" data-speed="-0.025"><img src="gif/學校.gif"></div>
+                    <div class="card layer-mid" id="card-6" data-speed="0.03"><img src="gif/捷運.gif"></div>
+                    <div class="card layer-mid" id="card-7" data-speed="0.04"><img src="gif/高鐵.gif"></div>
+                    <div class="card layer-mid" id="card-8" data-speed="0.02"><img src="gif/手扶梯.gif"></div>
+                    <div class="card layer-mid" id="card-9" data-speed="0.05"><img src="gif/電梯.gif"></div>
+                    <div class="card layer-mid" id="card-10" data-speed="0.03"><img src="gif/月台.gif"></div>
+                    <div class="card layer-mid" id="card-16" data-speed="0.035"><img src="gif/體育館.gif"></div>
+                    <div class="card layer-fg" id="card-11" data-speed="0.08"><img src="gif/海關.gif"></div>
+                    <div class="card layer-fg" id="card-12" data-speed="0.1"><img src="gif/高鐵.gif"></div>
+                    <div class="card layer-fg" id="card-13" data-speed="0.06"><img src="gif/捷運.gif"></div>
+                    <div class="card layer-fg" id="card-14" data-speed="0.09"><img src="gif/廁所.gif"></div>
+                    <div class="card layer-fg" id="card-17" data-speed="0.07"><img src="gif/餐廳.gif"></div>
+                </section>
+
+                <section class="panel" id="panel-about">
+                    <div class="about-scroll-container">
+                        <div class="about-content-wrapper">
+                            
+                            <div class="about-section-1">
+                                <div class="as1-text">
+                                    <h2 class="section-title">什麼是動字動字？</h2>
+                                    <p class="section-desc">
+                                        我們希望將公共場所的標誌統一，透過動態圖標加上手語動作的方式製作動字動字圖標系統，打造適合台灣手語的環境。
+                                        手語不只是一種輔助工具，它擁有獨立的語法與文化，我們試圖捕捉它的「節奏」，將其轉化為視覺。
+                                    </p>
+                                </div>
+                                <div class="as1-img" id="parallax-img-wrapper">
+                                    <img src="img/stair.jpg" alt="樓梯動態圖標示範" id="parallax-img">
+                                </div>
+                            </div>
+
+                            <div class="about-section-2">
+                                <div class="as2-img">
+                                    <img src="img/issue_collage.jpg" onerror="this.style.display='none'; this.parentNode.style.backgroundColor='#ddd'" alt="情境拼貼">
+                                </div>
+                                <div class="as2-text-group">
+                                    <h2 class="section-title">為什麼台灣手語要被看見</h2>
+                                    <p class="section-desc">
+                                        根據衛福部的調查，台灣手語在疫情後能見度變高，但也面臨越來越多的現況議題與挑戰。
+                                    </p>
+                                    <div class="issue-grid">
+                                        <div class="issue-capsule">聽障者真實需求難反映</div>
+                                        <div class="issue-capsule">被視為社會福利</div>
+                                        <div class="issue-capsule">收入不穩、專業不被尊重</div>
+                                        <div class="issue-capsule">手語翻譯員數量不足</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="about-section-3">
+                                <h2 class="section-title">許多人會誤解手語...</h2>
+                                <div class="myth-container">
+                                    <div class="flip-card">
+                                        <div class="flip-card-inner">
+                                            <div class="flip-card-front">
+                                                <div class="myth-icon"></div>
+                                                <div class="myth-text">手語只是在比手畫腳？</div>
+                                                <div class="click-hint">Hover / Click</div>
+                                            </div>
+                                            <div class="flip-card-back">
+                                                <div class="truth-title">FACT</div>
+                                                <div class="truth-text">錯！手語擁有獨立的文法結構，並非單純的肢體動作。</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flip-card">
+                                        <div class="flip-card-inner">
+                                            <div class="flip-card-front">
+                                                <div class="myth-icon"></div>
+                                                <div class="myth-text">手語只是輔助工具？</div>
+                                                <div class="click-hint">Hover / Click</div>
+                                            </div>
+                                            <div class="flip-card-back">
+                                                <div class="truth-title">FACT</div>
+                                                <div class="truth-text">對許多聽語障者而言，手語是他們的「母語」，是主要溝通語言。</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flip-card">
+                                        <div class="flip-card-inner">
+                                            <div class="flip-card-front">
+                                                <div class="myth-icon"></div>
+                                                <div class="myth-text">聽障者都看得懂中文？</div>
+                                                <div class="click-hint">Hover / Click</div>
+                                            </div>
+                                            <div class="flip-card-back">
+                                                <div class="truth-title">FACT</div>
+                                                <div class="truth-text">中文是「第二語言」。書面語法與手語文法不同，閱讀上有時仍有隔閡。</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="about-section-4">
+                                <div class="as4-content">
+                                    <h2 class="section-title">我們希望</h2>
+                                    <p class="section-desc">
+                                        因此，我們希望透過設計的力量，讓手語從「被翻譯」的角色轉變為「能被看見」的語言。藉由公共標示與動態設計的整合，建立一個具教育性與美感的手語展示系統。
+                                    </p>
+                                </div>
+                                <div class="breakdown-wrapper">
+                                    <img src="https://via.placeholder.com/800x400/cccccc/999999?text=" class="breakdown-img" alt="動態圖標拆解圖">
+                                </div>
+                            </div>
+
+                            <div class="about-section-5">
+                                <h2 class="section-title">手語小知識</h2>
+                                <div class="knowledge-list">
+                                    
+                                    <div class="k-card">
+                                        <div class="k-header" onclick="toggleKnowledge(this)">
+                                            <div class="k-title"><span class="k-icon"></span> 手語名字是什麼？</div>
+                                            <div class="k-arrow">▼</div>
+                                        </div>
+                                        <div class="k-body">
+                                            <div class="k-content">
+                                                在手語文化中，手語名字並不是直接翻譯文字姓名，而是根據個人的「外貌特徵」或「性格」來命名的。例如「愛笑的女生」、「戴眼鏡的男生」。這是一種非常直觀且具社群連結的命名方式 。
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="k-card">
+                                        <div class="k-header" onclick="toggleKnowledge(this)">
+                                            <div class="k-title"><span class="k-icon"></span> 表情也是文法？</div>
+                                            <div class="k-arrow">▼</div>
+                                        </div>
+                                        <div class="k-body">
+                                            <div class="k-content">
+                                                沒錯！手語不只看手，還要看臉。眉毛的上揚、眼睛的瞇起、嘴角的下垂，這些「非手控信號」在手語中扮演著文法助詞的角色，能改變一句話的語氣或疑問狀態 。
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="k-card">
+                                        <div class="k-header" onclick="toggleKnowledge(this)">
+                                            <div class="k-title"><span class="k-icon"></span> 手語不是全世界通用</div>
+                                            <div class="k-arrow">▼</div>
+                                        </div>
+                                        <div class="k-body">
+                                            <div class="k-content">
+                                                就像口語有英語、日語一樣，手語也有國籍之分。台灣手語屬於「日本手語系」(JSL)，這與我們的歷史背景有關，所以台灣手語跟美國手語是完全不通的喔！
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="k-card">
+                                        <div class="k-header" onclick="toggleKnowledge(this)">
+                                            <div class="k-title"><span class="k-icon"></span> 台北與台南比法不同？</div>
+                                            <div class="k-arrow">▼</div>
+                                        </div>
+                                        <div class="k-body">
+                                            <div class="k-content">
+                                                台灣手語也有「方言」！早期因為啟聰學校體系分為台北與台南兩大系統，導致許多單字（例如「星期一」）在南北有不同的比法，這也是手語有趣的地方之一。
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="k-card">
+                                        <div class="k-header" onclick="toggleKnowledge(this)">
+                                            <div class="k-title"><span class="k-icon"></span> 台灣手語是國家語言</div>
+                                            <div class="k-arrow">▼</div>
+                                        </div>
+                                        <div class="k-body">
+                                            <div class="k-content">
+                                                依據《國家語言發展法》，台灣手語已經正式成為台灣的國家語言之一。這代表它與華語、台語、客語擁有平等的地位，公共場所的無障礙化也因此變得更加重要 。
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel" id="panel-overview">
+                    <div class="overview-wrapper">
+                        <div class="category-section">
+                            <div class="category-title">公共場域 / 公共場所</div>
+                            <div class="icon-grid">
+                                <div class="icon-item"><div class="icon-frame"><img src="png/廁所.png" data-gif="gif/廁所.gif"></div><div class="icon-name">廁所</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/學校.png" data-gif="gif/學校.gif"></div><div class="icon-name">學校</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/圖書館.png" data-gif="gif/圖書館.gif"></div><div class="icon-name">圖書館</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/餐廳.png" data-gif="gif/餐廳.gif"></div><div class="icon-name">餐廳</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/公園.png" data-gif="gif/公園.gif"></div><div class="icon-name">公園</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/體育館.png" data-gif="gif/體育館.gif"></div><div class="icon-name">體育館</div></div>
+                            </div>
+                        </div>
+                        <div class="category-section">
+                            <div class="category-title">公共場域 / 交通</div>
+                            <div class="icon-grid">
+                                <div class="icon-item"><div class="icon-frame"><img src="png/月台.png" data-gif="gif/月台.gif"></div><div class="icon-name">月台</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/捷運.png" data-gif="gif/捷運.gif"></div><div class="icon-name">捷運</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/高鐵.png" data-gif="gif/高鐵.gif"></div><div class="icon-name">高鐵</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/公車.png" data-gif="gif/公車.gif"></div><div class="icon-name">公車</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/機場.png" data-gif="gif/機場.gif"></div><div class="icon-name">機場</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/海關.png" data-gif="gif/海關.gif"></div><div class="icon-name">海關</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/加油站.png" data-gif="gif/加油站.gif"></div><div class="icon-name">加油站</div></div>
+                            </div>
+                        </div>
+                        <div class="category-section">
+                            <div class="category-title">行為規範</div>
+                            <div class="icon-grid">
+                                <div class="icon-item"><div class="icon-frame"><img src="png/禁止飲食.png" data-gif="gif/禁止飲食.gif"></div><div class="icon-name">禁止飲食</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/禁止拍攝.png" data-gif="gif/禁止拍攝.gif"></div><div class="icon-name">禁止拍攝</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/禁止觸摸.png" data-gif="gif/禁止觸摸.gif"></div><div class="icon-name">禁止觸摸</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/禁止交談.png" data-gif="gif/禁止交談.gif"></div><div class="icon-name">禁止交談</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/禁止吸菸.png" data-gif="gif/禁止吸菸.gif"></div><div class="icon-name">禁止吸菸</div></div>
+                            </div>
+                        </div>
+                        <div class="category-section">
+                            <div class="category-title">使用 / 服務互動類</div>
+                            <div class="icon-grid">
+                                <div class="icon-item"><div class="icon-frame"><img src="png/滅火器.png" data-gif="gif/滅火器.gif"></div><div class="icon-name">滅火器</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/一般垃圾.png" data-gif="gif/一般垃圾.gif"></div><div class="icon-name">一般垃圾</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/資源回收.png" data-gif="gif/資源回收.gif"></div><div class="icon-name">資源回收</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/茶水間.png" data-gif="gif/茶水間.gif"></div><div class="icon-name">茶水間</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/置物櫃.png" data-gif="gif/置物櫃.gif"></div><div class="icon-name">置物櫃</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/哺(集)乳室.png" data-gif="gif/哺乳室.gif"></div><div class="icon-name">哺(集)乳室</div></div>
+                            </div>
+                        </div>
+                        <div class="category-section">
+                            <div class="category-title">使用 / 空間導向類、通訊設備類</div>
+                            <div class="icon-grid">
+                                <div class="icon-item"><div class="icon-frame"><img src="png/樓梯.png" data-gif="gif/樓梯.gif"></div><div class="icon-name">樓梯</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/手扶梯.png" data-gif="gif/手扶梯.gif"></div><div class="icon-name">手扶梯</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/電梯.png" data-gif="gif/電梯.gif"></div><div class="icon-name">電梯</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/進入.png" data-gif="gif/進入.gif"></div><div class="icon-name">進入</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/公共電話.png" data-gif="gif/公共電話.gif"></div><div class="icon-name">公共電話</div></div>
+                                <div class="icon-item"><div class="icon-frame"><img src="png/無線網路.png" data-gif="gif/無線網路.gif"></div><div class="icon-name">無線網路</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel" id="panel-download">
+                    <div class="download-container">
+                        <div class="dl-list" id="dl-list-container">
+                            </div>
+
+                        <div class="dl-editor">
+                            <div class="preview-box" id="dl-preview">
+                                <p style="color:#aaa;">請選擇左側圖標</p>
+                            </div>
+
+                            <div class="editor-controls">
+                                <div class="color-control-group">
+                                    <div class="color-row">
+                                        <span class="color-label">主色 (原本黑色部分)</span>
+                                        <input type="color" id="picker-black" value="#3F4243" oninput="updateDualColors()">
+                                    </div>
+                                    <div class="color-row">
+                                        <span class="color-label">副色 (原本藍色部分)</span>
+                                        <input type="color" id="picker-blue" value="#9FECFF" oninput="updateDualColors()">
+                                    </div>
+                                    <button class="reset-btn" onclick="resetColors()">重置為預設</button>
+                                </div>
+
+                                <div class="action-btns">
+                                    <button class="dl-btn" onclick="downloadIcon('png')">下載 PNG</button>
+                                    <button class="dl-btn outline" onclick="downloadIcon('svg')">下載 SVG</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel" id="panel-manual">
+                    <div class="manual-container">
+                        <a href="manual/guidelines.pdf" class="download-link" download>⬇ 下載完整規範手冊 (PDF)</a>
+                        <div class="book" id="manual-book"></div>
+                        <div class="page-indicator" id="page-indicator">1 / 10</div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="icon-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content">
+            <button class="btn-close-modal" onclick="closeModal(event)">×</button>
+            <div class="modal-video-wrap">
+                <video id="modal-video" controls autoplay playsinline loop>
+                    <source src="" type="video/mp4">
+                    您的瀏覽器不支援影片標籤。
+                </video>
+                <div id="no-video-msg" style="display:none; color:white;">暫無實際應用影片</div>
+            </div>
+            <h3 id="modal-title" class="modal-title">圖標名稱</h3>
+            <p class="modal-desc">實際應用展示</p>
+        </div>
+    </div>
+
+    <div id="fake-cursor">
+        <div id="fake-cursor-img"></div>
+    </div>
+
+    <script>
+        // --- 1. 頁面跳轉控制 ---
+        function scrollToPage(index) {
+            const viewportHeight = window.innerHeight;
+            window.scrollTo({
+                top: index * viewportHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        window.addEventListener('scroll', () => {
+            const viewportHeight = window.innerHeight;
+            const scrollY = window.scrollY;
+            const navBtns = document.querySelectorAll('.nav-btn');
+            
+            // 支援到第 5 頁
+            const pageIndex = Math.floor((scrollY + viewportHeight * 0.5) / viewportHeight);
+            
+            navBtns.forEach(btn => btn.classList.remove('active'));
+            // 修改判斷式：因為現在有 5 個按鈕 (index 0~4)
+            if (pageIndex < 5 && navBtns[pageIndex]) {
+                navBtns[pageIndex].classList.add('active');
+            }
+        });
+
+        // --- 2. 打字機 ---
+        function typeText(elementId, text, speed, callback) {
+            const element = document.getElementById(elementId);
+            if(!element) return;
+            let index = 0;
+            element.textContent = ""; 
+            function type() {
+                if (index < text.length) {
+                    element.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(type, speed);
+                } else if (callback) callback();
+            }
+            type();
+        }
+        setTimeout(() => {
+            typeText("hero-typewriter", "你有想過手語出現在公共標誌中嗎?", 100);
+        }, 1000);
+
+        // --- 3. 水平滾動邏輯 ---
+        const scrollContainer = document.getElementById('scroll-container');
+        const track = document.getElementById('horizontal-track');
+        let hasAnimated = false; 
+
+        window.addEventListener('scroll', () => {
+            const stickyTop = scrollContainer.offsetTop;
+            const scrollY = window.scrollY;
+            const viewportHeight = window.innerHeight;
+            const containerHeight = scrollContainer.getBoundingClientRect().height;
+            
+            let percentage = (scrollY - stickyTop) / (containerHeight - viewportHeight);
+            percentage = Math.min(Math.max(percentage, 0), 1);
+
+            const trackWidth = track.scrollWidth;
+            const moveX = percentage * -(trackWidth - window.innerWidth);
+            
+            track.style.transform = `translate3d(${moveX}px, 0, 0)`;
+        });
+
+        // --- Panel 2: 內部視差效果 ---
+        const aboutContainer = document.querySelector('.about-scroll-container');
+        const parallaxImg = document.getElementById('parallax-img');
+        
+        if(aboutContainer && parallaxImg) {
+            aboutContainer.addEventListener('scroll', () => {
+                const scrollPos = aboutContainer.scrollTop;
+                // 圖片輕微移動
+                parallaxImg.style.transform = `translateY(${scrollPos * 0.2}px)`;
+            });
+        }
+
+        // --- 手語小知識開關 (Accordion) ---
+        function toggleKnowledge(header) {
+            const card = header.parentElement;
+            card.classList.toggle('active');
+        }
+
+        // --- 4. 視差與鼠標動畫 ---
+        const fakeCursor = document.getElementById('fake-cursor');
+        const parallaxItems = document.querySelectorAll('[data-speed]');
+        let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX; targetY = e.clientY;
+        });
+        document.addEventListener('mousedown', () => fakeCursor.classList.add('is-clicking'));
+        document.addEventListener('mouseup', () => fakeCursor.classList.remove('is-clicking'));
+
+        function animate() {
+            const ease = 0.15; 
+            currentX += (targetX - currentX) * ease;
+            currentY += (targetY - currentY) * ease;
+            fakeCursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const mouseOffsetX = currentX - centerX;
+            const mouseOffsetY = currentY - centerY;
+
+            if(window.scrollY < window.innerHeight) {
+                parallaxItems.forEach(item => {
+                    const speed = parseFloat(item.getAttribute('data-speed'));
+                    const xPos = mouseOffsetX * speed;
+                    const yPos = mouseOffsetY * speed;
+                    item.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+                });
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // --- 5. 圖標 Hover 切換 ---
+        const iconItems = document.querySelectorAll('.icon-item img');
+        iconItems.forEach(img => {
+            const staticSrc = img.getAttribute('src');
+            const gifSrc = img.getAttribute('data-gif');
+            img.addEventListener('mouseenter', () => { img.src = gifSrc; });
+            img.addEventListener('mouseleave', () => { img.src = staticSrc; });
+        });
+
+        // --- 6. 下載專區邏輯 ---
+        const iconList = [
+            '廁所', '學校', '圖書館', '餐廳', '公園', '體育館',
+            '月台', '捷運', '高鐵', '公車', '機場', '海關', '加油站',
+            '禁止飲食', '禁止拍攝', '禁止觸摸', '禁止交談', '禁止吸菸',
+            '滅火器', '一般垃圾', '資源回收', '茶水間', '置物櫃', '哺(集)乳室',
+            '樓梯', '手扶梯', '電梯', '進入', '公共電話', '無線網路'
+        ];
+
+        let currentIcon = null;
+        let svgContent = ''; 
+        let colorBlackPart = '#3F4243'; 
+        let colorBluePart = '#9FECFF';
+
+        const listContainer = document.getElementById('dl-list-container');
+        iconList.forEach(name => {
+            const item = document.createElement('div');
+            item.className = 'dl-item';
+            const displayName = name === '哺乳室' ? '哺(集)乳室' : name;
+            item.innerHTML = `<img src="png/${name}.png"><span>${displayName}</span>`;
+            item.onclick = () => selectIcon(name, item);
+            listContainer.appendChild(item);
+        });
+
+        async function selectIcon(name, domItem) {
+            currentIcon = name;
+            
+            document.querySelectorAll('.dl-item').forEach(el => el.classList.remove('active'));
+            domItem.classList.add('active');
+
+            const container = document.getElementById('dl-preview');
+            container.innerHTML = `<img src="png/${name}.png" style="width:100%;height:100%;object-fit:contain;">`;
+
+            try {
+                const res = await fetch(`svg/${name}.svg`);
+                if (!res.ok) throw new Error('SVG not found');
+                svgContent = await res.text();
+                renderDualColorSVG();
+            } catch (err) {
+                console.error(err);
+                svgContent = `<svg viewBox="0 0 100 100"><text y="50">SVG 檔案缺失</text></svg>`;
+            }
+        }
+
+        function updateDualColors() {
+            colorBlackPart = document.getElementById('picker-black').value;
+            colorBluePart = document.getElementById('picker-blue').value;
+            renderDualColorSVG();
+        }
+
+        function resetColors() {
+            colorBlackPart = '#3F4243';
+            colorBluePart = '#9FECFF';
+            document.getElementById('picker-black').value = colorBlackPart;
+            document.getElementById('picker-blue').value = colorBluePart;
+            renderDualColorSVG();
+        }
+
+        function renderDualColorSVG() {
+            if (!svgContent) return;
+
+            let modifiedSVG = svgContent
+                .replaceAll(/#3F4243/gi, colorBlackPart) 
+                .replaceAll(/#9FECFF/gi, colorBluePart); 
+
+            const container = document.getElementById('dl-preview');
+            container.innerHTML = modifiedSVG;
+            
+            const svgEl = container.querySelector('svg');
+            if(svgEl) {
+                svgEl.style.width = '100%';
+                svgEl.style.height = '100%';
+                svgEl.style.objectFit = 'contain';
+            }
+        }
+
+        function downloadIcon(type) {
+            if (!currentIcon) return alert('請先選擇圖標');
+
+            const link = document.createElement('a');
+            const fileName = `${currentIcon}_客製化`;
+
+            if (type === 'svg') {
+                const svgHtml = document.getElementById('dl-preview').innerHTML;
+                const blob = new Blob([svgHtml], {type: 'image/svg+xml'});
+                link.href = URL.createObjectURL(blob);
+                link.download = `${fileName}.svg`;
+                link.click();
+            } else if (type === 'png') {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                canvas.width = 1024;
+                canvas.height = 1024;
+                const svgHtml = document.getElementById('dl-preview').innerHTML;
+                const blob = new Blob([svgHtml], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                img.src = url;
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    link.href = canvas.toDataURL('image/png');
+                    link.download = `${fileName}.png`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                };
+            }
+        }
+
+        // --- 7. 視覺規範手冊翻頁邏輯 (物理拖曳版 - Z-index 修正) ---
+        const totalPages = 10; 
+        let currentPage = 0; 
+        const bookEl = document.getElementById('manual-book');
+        
+        let isDragging = false;
+        let startX = 0;
+        let currentDragPage = null;
+        let pageWidth = 800; 
+
+        function initBook() {
+            bookEl.innerHTML = '';
+            for (let i = 0; i < totalPages; i++) {
+                const page = document.createElement('div');
+                page.className = 'page';
+                page.id = `page-${i}`;
+                const img = document.createElement('img');
+                img.src = `manual/${i + 1}.jpg`; 
+                img.alt = `Page ${i + 1}`;
+                page.addEventListener('pointerdown', handlePointerDown);
+                page.appendChild(img);
+                bookEl.appendChild(page);
+            }
+            updateZIndex(); 
+            updateIndicator();
+        }
+
+        function updateZIndex() {
+            for (let i = 0; i < totalPages; i++) {
+                const page = document.getElementById(`page-${i}`);
+                if (i < currentPage) {
+                    page.style.zIndex = i + 1;
+                } else {
+                    page.style.zIndex = totalPages - i + 1;
+                }
+            }
+        }
+
+        function handlePointerDown(e) {
+            e.preventDefault(); 
+            const target = e.currentTarget;
+            const index = parseInt(target.id.split('-')[1]);
+            const isFlipped = target.classList.contains('flipped');
+            if (!isFlipped && index === currentPage) {
+                startDrag(target, e);
+            } else if (isFlipped && index === currentPage - 1) {
+                startDrag(target, e);
+            }
+        }
+
+        function startDrag(target, e) {
+            isDragging = true;
+            currentDragPage = target;
+            startX = e.clientX;
+            target.setPointerCapture(e.pointerId);
+            target.classList.add('grabbing');
+            target.style.zIndex = 9999;
+        }
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging || !currentDragPage) return;
+            const dx = e.clientX - startX;
+            const isFlipped = currentDragPage.classList.contains('flipped');
+            let rotation = 0;
+            if (!isFlipped) {
+                if (dx < 0) {
+                    const progress = Math.min(Math.abs(dx) / pageWidth, 1);
+                    rotation = -180 * progress;
+                }
+            } else {
+                if (dx > 0) {
+                    const progress = Math.min(Math.abs(dx) / pageWidth, 1);
+                    rotation = -180 + (180 * progress);
+                } else {
+                    rotation = -180;
+                }
+            }
+            currentDragPage.style.transform = `rotateY(${rotation}deg)`;
+        });
+
+        window.addEventListener('pointerup', (e) => {
+            if (!isDragging || !currentDragPage) return;
+            const dx = e.clientX - startX;
+            const isFlipped = currentDragPage.classList.contains('flipped');
+            const threshold = pageWidth * 0.2; 
+            currentDragPage.classList.remove('grabbing');
+            currentDragPage.style.transform = ''; 
+            if (!isFlipped) {
+                if (dx < -threshold || (Math.abs(dx) < 5)) { 
+                    currentDragPage.classList.add('flipped');
+                    currentPage++;
+                } else {
+                    currentDragPage.classList.remove('flipped');
+                }
+            } else {
+                if (dx > threshold || (Math.abs(dx) < 5)) { 
+                    currentDragPage.classList.remove('flipped');
+                    currentPage--;
+                } else {
+                    currentDragPage.classList.add('flipped');
+                }
+            }
+            isDragging = false;
+            currentDragPage = null;
+            setTimeout(() => {
+                updateZIndex();
+                updateIndicator();
+            }, 300); 
+        });
+
+        function updateIndicator() {
+            let displayNum = currentPage + 1;
+            if(displayNum > totalPages) displayNum = totalPages;
+            if(currentPage === 0) displayNum = 1;
+            document.getElementById('page-indicator').textContent = `${displayNum} / ${totalPages}`;
+        }
+
+        initBook();
+
+        // --- 8. 圖標點擊彈窗邏輯 (影片彈窗) ---
+        const modal = document.getElementById('icon-modal');
+        const modalVideo = document.getElementById('modal-video');
+        const modalTitle = document.getElementById('modal-title');
+        const noVideoMsg = document.getElementById('no-video-msg');
+
+        const overviewIcons = document.querySelectorAll('#panel-overview .icon-item');
+
+        overviewIcons.forEach(item => {
+            item.addEventListener('click', () => {
+                const name = item.querySelector('.icon-name').innerText.trim();
+                const fileName = name === '哺(集)乳室' ? '哺乳室' : name;
+                openModal(name, fileName);
+            });
+        });
+
+        function openModal(displayName, fileName) {
+            modalTitle.textContent = displayName;
+            const videoPath = `video/${fileName}.mp4`;
+            modalVideo.src = videoPath;
+            modalVideo.style.display = 'block';
+            noVideoMsg.style.display = 'none';
+            const playPromise = modalVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log('Video play failed or not found:', error);
+                    modalVideo.style.display = 'none';
+                    noVideoMsg.style.display = 'block';
+                });
+            }
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(e) {
+            if (e.target.classList.contains('modal-overlay') || 
+                e.target.classList.contains('btn-close-modal')) {
+                modal.classList.remove('active');
+                modalVideo.pause();
+                modalVideo.currentTime = 0; 
+                modalVideo.src = ""; 
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal({ target: modal });
+            }
+        });
+
+    </script>
+
+</body>
+</html>

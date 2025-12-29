@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>20種結果留言牆</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    font-family: "Manrope", "Noto Sans TC", sans-serif; 
+    margin: 0; padding: 0; 
+    background: #f0f0f0; 
+    height: 100vh; width: 100vw;
+    overflow: hidden; 
+  }
+
+  /* === 主容器 === */
+  .viewport {
+    width: 100%; height: 100%;
+    position: relative;
+    background-color: #fdfbf7;
+    background-image: radial-gradient(#ddd 1px, transparent 1px);
+    background-size: 30px 30px;
+    display: flex; justify-content: center; align-items: center; 
+    padding-bottom: 60px; 
+  }
+
+  /* === 廣場網格 === */
+  .plaza {
+    width: 95vw; height: 85vh; 
+    display: grid; 
+    grid-template-columns: repeat(5, 1fr); 
+    grid-template-rows: repeat(4, 1fr);
+    gap: 12px; 
+  }
+
+  /* === 區域樣式 === */
+  .zone {
+    position: relative;
+    border: 1px dashed rgba(0,0,0,0.15); 
+    border-radius: 12px;
+    background: rgba(255,255,255,0.4);
+    transition: all 0.2s;
+  }
+  .zone:hover { 
+    background: rgba(255,255,255,0.8); 
+    border-color: rgba(0,0,0,0.3);
+  }
+  .zone-label {
+    position: absolute; 
+    font-size: 16px; font-weight: 900; color: #555; opacity: 0.4;
+    bottom: 8px; right: 10px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* === 小人樣式 === */
+  .person {
+    position: absolute;
+    display: flex; flex-direction: column; align-items: center;
+    width: 40px; z-index: 10;
+    transition: transform 0.2s, z-index 0.2s;
+    cursor: pointer;
+  }
+  .person:hover { z-index: 100 !important; transform: scale(1.5); }
+
+  .avatar {
+    width: 34px; height: 34px; 
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex; justify-content: center; align-items: center;
+    font-size: 18px; border: 2px solid #fff;
+  }
+  
+  .bubble {
+    background: #fff; padding: 3px 6px; border-radius: 6px;
+    font-size: 12px; font-weight: 700; color: #333;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 2px; position: relative;
+    max-width: 100px; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0.9;
+  }
+  .person:hover .bubble { white-space: normal; overflow: visible; z-index: 101; min-width: 80px;}
+  .bubble::after {
+    content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+    border-width: 4px 4px 0; border-style: solid; border-color: #fff transparent transparent;
+  }
+
+  /* 隨機顏色 */
+  .style-0 .avatar { border-color: #ff8a80; background: #ffebee; }
+  .style-1 .avatar { border-color: #ffd180; background: #fff3e0; }
+  .style-2 .avatar { border-color: #ffff8d; background: #fffde7; }
+  .style-3 .avatar { border-color: #ccff90; background: #f1f8e9; }
+  .style-4 .avatar { border-color: #a7ffeb; background: #e0f7fa; }
+  .style-5 .avatar { border-color: #80d8ff; background: #e1f5fe; }
+  .style-6 .avatar { border-color: #82b1ff; background: #e3f2fd; }
+  .style-7 .avatar { border-color: #b388ff; background: #ede7f6; }
+  .style-8 .avatar { border-color: #f48fb1; background: #fce4ec; }
+  .style-9 .avatar { border-color: #cfd8dc; background: #eceff1; }
+
+  /* === UI 固定層 === */
+  .ui-layer {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 500;
+  }
+  .ui-layer > * { pointer-events: auto; }
+
+  .input-bar {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 70px;
+    background: rgba(255,255,255,0.9); padding: 0 40px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+    display: flex; align-items: center; gap: 20px; 
+    backdrop-filter: blur(8px);
+    border-top: 1px solid #eee;
+  }
+  .role-badge { 
+    background: #333; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: bold; white-space: nowrap; font-size: 14px;
+  }
+  input { 
+    flex-grow: 1; padding: 10px; font-size: 16px; border: 2px solid #eee; border-radius: 50px; outline: none; 
+  }
+  button.send { 
+    padding: 10px 25px; border-radius: 50px; border: 0; background: #ffdd00; font-weight: 900; font-size: 16px; cursor: pointer; 
+  }
+  button.home {
+    padding: 10px; border-radius: 50%; border: 2px solid #eee; background: #fff; cursor: pointer; font-size: 18px;
+  }
+
+  .sidebar {
+    position: absolute; top: 0; right: 0; width: 360px; height: 100%;
+    background: #fff; box-shadow: -5px 0 30px rgba(0,0,0,0.1);
+    transform: translateX(320px); 
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    display: flex; flex-direction: column;
+  }
+  .sidebar:hover { transform: translateX(0); }
+  
+  .sidebar-tab {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%) translateX(-100%);
+    background: #333; color: #fff;
+    padding: 20px 8px; border-radius: 10px 0 0 10px;
+    writing-mode: vertical-lr; font-weight: bold; letter-spacing: 2px;
+    cursor: pointer; box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+  }
+  
+  .sidebar-content { padding: 30px; overflow-y: auto; height: 100%; }
+  .chart-container { position: relative; width: 100%; height: 250px; margin-bottom: 30px; }
+  h2 { font-size: 20px; font-weight: 900; margin-bottom: 20px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+  
+  .ranking-list { list-style: none; padding: 0; margin: 0; }
+  .rank-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; }
+  .rank-num { font-size: 18px; font-weight: 900; color: #ccc; margin-right: 15px; width: 30px; }
+  .rank-item:nth-child(1) .rank-num { color: #ffd700; } 
+  .rank-item:nth-child(2) .rank-num { color: #c0c0c0; } 
+  .rank-item:nth-child(3) .rank-num { color: #cd7f32; } 
+  .rank-name { font-weight: 700; flex-grow: 1; text-align: left; font-size: 15px; }
+  .rank-count { font-weight: 900; color: #ff8a80; background: #fff0f0; padding: 4px 8px; border-radius: 8px; font-size: 13px;}
+
+  /* ★★★ 真正的隱形按鈕 ★★★ */
+  #secret-btn {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100px; height: 100px; /* 左上角 100x100 區域 */
+    z-index: 9999;
+    background: transparent; /* 完全透明 */
+    cursor: default; /* 保持預設游標，不讓使用者發現 */
+  }
+</style>
+</head>
+<body>
+
+  <div class="viewport">
+    <div class="plaza" id="plaza">
+      </div>
+  </div>
+
+  <div id="secret-btn" onclick="handleSecretClick()"></div>
+
+  <div class="ui-layer">
+    <div class="input-bar">
+      <button class="home" onclick="location.href='index.html'">🏠</button>
+      <div class="role-badge">我是：<span id="my-role">未知</span></div>
+      <input type="text" id="msg-input" placeholder="留個言吧..." maxlength="20">
+      <button class="send" onclick="addMessage()">送出</button>
+    </div>
+
+    <div class="sidebar">
+      <div class="sidebar-tab">📊 數據分析</div>
+      <div class="sidebar-content">
+        <h2>各角色分佈</h2>
+        <div class="chart-container"><canvas id="roleChart"></canvas></div>
+        <h2>🏆 選擇最多 TOP 3</h2>
+        <ul id="top3-list" class="ranking-list"></ul>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ==========================================
+  // 1. 設定：20 種結果名稱
+  // ==========================================
+  const roleList = [
+    "淘氣", "幽默", "活潑", "大方",
+    "害羞", "冷靜", "文靜", "沉穩",
+    "溫柔", "善良", "耐心", "樂觀",
+    "勇敢", "自信", "果斷", "獨立",
+    "敏銳", "細心", "聰明", "謹慎"
+  ];
+
+  // 生成格子
+  const plaza = document.getElementById('plaza');
+  roleList.forEach((role, i) => {
+    const zone = document.createElement('div');
+    zone.className = 'zone';
+    zone.id = `zone-${i}`;
+    
+    const label = document.createElement('div');
+    label.className = 'zone-label';
+    label.textContent = role;
+    zone.appendChild(label);
+    plaza.appendChild(zone);
+  });
+
+  // ==========================================
+  // 2. 隱藏清空邏輯 (連點 5 下)
+  // ==========================================
+  let secretClicks = 0;
+  let secretTimer = null;
+
+  function handleSecretClick() {
+    secretClicks++;
+    
+    // 如果點太慢(超過0.5秒)就重算
+    clearTimeout(secretTimer);
+    secretTimer = setTimeout(() => { secretClicks = 0; }, 500);
+
+    if(secretClicks >= 5) {
+      if(confirm('【管理員模式】\n\n確定要清空所有留言嗎？')) {
+        localStorage.removeItem('guestbook_messages');
+        alert('已清空');
+        location.reload();
+      }
+      secretClicks = 0;
+    }
+  }
+
+  // ==========================================
+  // 3. 資料與渲染
+  // ==========================================
+  const myData = JSON.parse(localStorage.getItem('photobooth_template') || '{}');
+  const myRole = myData.role || '未測驗路人';
+  document.getElementById('my-role').textContent = myRole;
+
+  let messages = JSON.parse(localStorage.getItem('guestbook_messages') || '[]');
+  
+  if(messages.length === 0) {
+    messages = [
+      { role: '淘氣', text: '我是淘氣鬼！', time: '10:00' },
+      { role: '溫柔', text: '大家好～', time: '10:05' },
+      { role: '聰明', text: '這裡可以看到全部', time: '10:08' },
+      { role: '勇敢', text: '我不怕！', time: '10:10' }
+    ];
+    localStorage.setItem('guestbook_messages', JSON.stringify(messages));
+  }
+
+  function renderCrowd() {
+    document.querySelectorAll('.zone').forEach(z => {
+      const label = z.querySelector('.zone-label');
+      z.innerHTML = ''; 
+      if(label) z.appendChild(label);
+    });
+
+    messages.forEach((msg, idx) => {
+      let roleIndex = roleList.indexOf(msg.role);
+      if(roleIndex === -1) roleIndex = 19; 
+
+      const container = document.getElementById(`zone-${roleIndex}`);
+      if(!container) return;
+
+      const person = document.createElement('div');
+      const styleIdx = roleIndex % 10; 
+      person.className = `person style-${styleIdx}`;
+      
+      const hash = msg.text.length + idx * 113; 
+      const randX = (hash * 37 % 70) + 15; 
+      const randY = (hash * 59 % 60) + 20; 
+      
+      person.style.left = `${randX}%`;
+      person.style.top = `${randY}%`;
+      person.style.zIndex = idx + 10;
+
+      const emojis = ['😃','😎','🧐','😊','🤠','🥳','😍','🤔'];
+      const emoji = emojis[hash % emojis.length];
+
+      person.innerHTML = `
+        <div class="bubble">${msg.text}</div>
+        <div class="avatar">${emoji}</div>
+      `;
+      container.appendChild(person);
+    });
+  }
+
+  // ==========================================
+  // 4. 輸入與統計
+  // ==========================================
+  function addMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if(!text) return;
+    
+    const newMsg = {
+      role: myRole,
+      text: text,
+      time: new Date().toLocaleTimeString()
+    };
+    
+    messages.push(newMsg); 
+    localStorage.setItem('guestbook_messages', JSON.stringify(messages));
+    
+    input.value = '';
+    renderCrowd();
+    updateStats();
+  }
+
+  document.getElementById('msg-input').addEventListener('keypress', (e)=>{
+    if(e.key==='Enter') addMessage();
+  });
+
+  let chartInstance = null;
+  function updateStats() {
+    const counts = {};
+    messages.forEach(m => { 
+      const name = roleList.includes(m.role) ? m.role : '其他';
+      counts[name] = (counts[name] || 0) + 1; 
+    });
+    
+    const ctx = document.getElementById('roleChart');
+    if(chartInstance) chartInstance.destroy();
+    
+    const colors = ['#ff8a80', '#ffd180', '#ffff8d', '#ccff90', '#a7ffeb', '#80d8ff', '#b388ff', '#f48fb1', '#cfd8dc'];
+
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(counts),
+        datasets: [{
+          data: Object.values(counts),
+          backgroundColor: Object.keys(counts).map((_, i) => colors[i % colors.length]),
+          borderWidth: 1
+        }]
+      },
+      options: { 
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const listEl = document.getElementById('top3-list');
+    listEl.innerHTML = '';
+
+    if(sorted.length === 0) listEl.innerHTML = '<li style="color:#999;text-align:center;">暫無數據</li>';
+    else {
+      sorted.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = 'rank-item';
+        li.innerHTML = `
+          <div style="display:flex; align-items:center;">
+            <span class="rank-num">${index + 1}</span>
+            <span class="rank-name">${item[0]}</span>
+          </div>
+          <span class="rank-count">${item[1]} 人</span>
+        `;
+        listEl.appendChild(li);
+      });
+    }
+  }
+
+  renderCrowd();
+  updateStats();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>拍貼完成</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+  <style>
+    /* === 基礎設定 === */
+    *{box-sizing:border-box;-webkit-user-select:none;user-select:none;}
+    html,body{height:100%;margin:0;background:#fff;color:#3b3f44;font-family:"Manrope","Noto Sans TC",sans-serif;overscroll-behavior:none;}
+    
+    .outer{
+      width:100vw; height:100vh; overflow:hidden;
+      display:grid; place-items:center;
+    }
+    .stage{
+      width:1366px; height:1024px; position:relative;
+      transform: scale(calc(var(--vh, 1vh) * 100 / 1024 * 0.9)); 
+    }
+    
+    .wrap{
+      position:absolute; inset:0;
+      display:grid; grid-template-columns: 480px 1fr; 
+      gap: 40px; padding:60px 80px;
+      align-items:center;
+    }
+
+    /* 左側：操作區 */
+    .left{ 
+      text-align:center;
+      display:flex; 
+      flex-direction:column; 
+      justify-content:center; 
+      align-items: center;
+      height: 100%;
+    }
+    
+    #ui-qrcode {
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      width: 300px; height: 300px;
+      display: flex; justify-content: center; align-items: center;
+    }
+
+    .qr-hint {
+      font-size: 20px; font-weight: 700; color: #666; margin-top: 5px; margin-bottom: 30px;
+    }
+    
+    .btns{ display:flex; flex-direction:column; gap:20px; width: 100%; align-items:center; }
+    
+    button, a.btn-link {
+      appearance:none; border:0; border-radius:20px;
+      padding:18px 32px; font-size:22px; font-weight:800;
+      cursor:pointer; text-decoration:none;
+      box-shadow:0 6px 0 rgba(0,0,0,.15); transition:.15s;
+      display:inline-flex; align-items:center; justify-content:center;
+      width: 100%; max-width: 300px;
+      color: #3b3f44;
+    }
+    
+    .secondary { background:#fff; border:2px solid #eee; color:#555; box-shadow:0 6px 0 #ddd; }
+    .warn { background:#ffebeb; color:#d64545; }
+    .primary { background:#ffdd00; }
+    
+    button:hover, a.btn-link:hover { transform:translateY(-2px); box-shadow:0 10px 0 rgba(0,0,0,.15); }
+    button:active, a.btn-link:active { transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.15); }
+
+    /* 右側：顯示區 */
+    .right{ 
+      display:flex; justify-content:center; align-items:center; 
+      height: 100%;
+    }
+
+    .frame-container {
+      height: 85vh; 
+      aspect-ratio: 9/16; 
+      background: #f0f0f0; 
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      position: relative;
+      overflow: hidden; 
+    }
+
+    canvas {
+      width: 100%; height: 100%;
+      display: block;
+    }
+    
+    /* 隱藏的來源容器 */
+    #source-videos { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -100; }
+    
+    #status-text {
+      position: absolute; bottom: 20px; left: 0; right: 0; text-align: center;
+      font-weight: bold; color: #888; font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="outer">
+  <div class="stage">
+    <div class="wrap">
+      
+      <div class="left">
+        <div id="ui-qrcode"></div>
+        <div class="qr-hint">掃描下載動態影片</div>
+
+        <div class="btns">
+          <a id="download-btn" class="secondary btn-link" href="#" style="opacity:0.5; pointer-events:none;">
+            ⏳ 影片生成中...
+          </a>
+          <button class="warn" onclick="restart()">↻ 重新拍攝</button>
+          <button class="primary" onclick="location.href='guestbook.html'">✎ 來留言吧！</button>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="frame-container">
+          <canvas id="resultCanvas"></canvas>
+          <div id="status-text">正在合成動態影像...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="source-videos">
+    <video id="template-video" src="video/拍貼模板_透明.webm" loop muted playsinline crossorigin="anonymous"></video>
+</div>
+
+<script>
+// ==========================================
+// 1. 設定與初始化
+// ==========================================
+
+// ★ 修改點：針對 1080x1920 的透明橫式模板重新設定座標
+// X=40, W=1000 (左右各留40px邊距)
+// Y位置依照上中下分佈
+const CLIP_POSITIONS = [
+  // 上方框 (動作1)
+  { x: 60, y: 350, w: 1000, h: 500, rotate: 0 }, 
+  // 中間框 (動作2)
+  { x: 40, y: 850, w: 1000, h: 500, rotate: 0 },  
+  // 下方框 (動作3)
+  { x: 40, y: 1350, w: 1000, h: 500, rotate: 0 }  
+];
+
+const canvas = document.getElementById('resultCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 1080;
+canvas.height = 1920;
+
+const templateVideo = document.getElementById('template-video');
+
+// ==========================================
+// 2. 資料庫與載入工具
+// ==========================================
+
+function getBlobFromDB(key) {
+  return new Promise((resolve) => {
+    const request = indexedDB.open("PhotoboothDB", 3);
+    request.onsuccess = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains("videos")) { resolve(null); return; }
+      
+      const tx = db.transaction("videos", "readonly");
+      const req = tx.objectStore("videos").get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    };
+    request.onerror = () => resolve(null);
+  });
+}
+
+async function loadVideoClip(key, container) {
+  const blob = await getBlobFromDB(key);
+  if(!blob) return null;
+  
+  const vid = document.createElement('video');
+  vid.src = URL.createObjectURL(blob);
+  vid.muted = true;
+  vid.loop = true;
+  vid.playsInline = true; 
+  vid.autoplay = true; 
+  container.appendChild(vid);
+  
+  await new Promise(r => {
+    vid.onloadedmetadata = () => {
+      vid.play(); 
+      r();
+    };
+    setTimeout(r, 1000);
+  });
+  return vid;
+}
+
+// 載入模板影片 (確保它開始播放)
+function loadTemplate() {
+    return new Promise((resolve, reject) => {
+        templateVideo.play().then(() => {
+            resolve();
+        }).catch(e => {
+            // 有時候自動播放會被阻擋，這裡做個容錯
+            console.log("Template autoplay might be blocked, trying muted play");
+            templateVideo.muted = true;
+            templateVideo.play().then(resolve).catch(resolve);
+        });
+    });
+}
+
+// ==========================================
+// 3. 核心：動態合成與錄製
+// ==========================================
+
+async function composeDynamicVideo() {
+  const container = document.getElementById('source-videos');
+  const statusText = document.getElementById('status-text');
+
+  // 1. 載入使用者拍攝的 3 個片段
+  const userClips = [];
+  for(let i=0; i<3; i++) {
+    const v = await loadVideoClip(`clip_${i}`, container);
+    userClips.push(v);
+  }
+  
+  // 2. 載入動態模板
+  await loadTemplate();
+  
+  // 3. 開始渲染迴圈 (Render Loop)
+  function render() {
+    // A. 清空畫布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 填個白色底色 (避免透明處變黑)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // B. 先繪製使用者的影片 (在底層)
+    userClips.forEach((v, index) => {
+      if(v && CLIP_POSITIONS[index]) {
+        const pos = CLIP_POSITIONS[index];
+        drawVideo(ctx, v, pos.x, pos.y, pos.w, pos.h, pos.rotate);
+      }
+    });
+    
+    // C. 再繪製動態模板 (在上層，因為是透明的)
+    // 確保模板影片已經準備好
+    if (templateVideo.readyState >= 2) {
+        ctx.drawImage(templateVideo, 0, 0, canvas.width, canvas.height);
+    }
+    
+    requestAnimationFrame(render);
+  }
+  
+  render(); // 啟動畫面更新
+  statusText.textContent = "預覽播放中，正在背景生成檔案...";
+
+  // 4. 開始錄製 Canvas 成為最終檔案
+  startCanvasRecording();
+}
+
+function drawVideo(ctx, video, x, y, width, height, degrees) {
+  ctx.save();
+  ctx.translate(x + width/2, y + height/2);
+  ctx.rotate(degrees * Math.PI / 180.0);
+  
+  if(video) {
+    // 保持比例填滿框框 (Object-fit: cover 效果)
+    const ratio = video.videoWidth / video.videoHeight;
+    const targetRatio = width / height;
+    let sw, sh, sx, sy;
+
+    if (ratio > targetRatio) {
+        sh = video.videoHeight;
+        sw = sh * targetRatio;
+        sy = 0;
+        sx = (video.videoWidth - sw) / 2;
+    } else {
+        sw = video.videoWidth;
+        sh = sw / targetRatio;
+        sx = 0;
+        sy = (video.videoHeight - sh) / 2;
+    }
+    
+    ctx.drawImage(video, sx, sy, sw, sh, -width/2, -height/2, width, height);
+  }
+  ctx.restore();
+}
+
+// ==========================================
+// 4. 錄製 Canvas 輸出下載檔
+// ==========================================
+
+function startCanvasRecording() {
+  const stream = canvas.captureStream(30);
+  
+  let mimeType = 'video/webm';
+  if(!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = 'video/mp4'; 
+  }
+
+  const recorder = new MediaRecorder(stream, { 
+    mimeType: mimeType,
+    videoBitsPerSecond: 8000000 // 8Mbps 高畫質
+  });
+  
+  const chunks = [];
+  recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+  
+  recorder.onstop = async () => {
+    const finalBlob = new Blob(chunks, { type: mimeType });
+    const finalUrl = URL.createObjectURL(finalBlob);
+    
+    console.log(`最終影片生成完畢`);
+    document.getElementById('status-text').textContent = "動態影片生成完成！";
+    
+    const dlBtn = document.getElementById('download-btn');
+    dlBtn.href = finalUrl;
+    dlBtn.download = `photobooth_dynamic_${Date.now()}.webm`;
+    dlBtn.innerHTML = "⬇ 下載動態影片";
+    dlBtn.style.opacity = 1;
+    dlBtn.style.pointerEvents = 'auto';
+
+    generateUIQRCode(window.location.href); 
+  };
+  
+  recorder.start();
+  
+  // ★ 修改點：錄製 13.1 秒 (確保涵蓋模板的動態循環)
+  setTimeout(() => {
+    recorder.stop();
+  }, 13100);
+}
+
+function generateUIQRCode(text) {
+  const container = document.getElementById('ui-qrcode');
+  container.innerHTML = ''; 
+  new QRCode(container, {
+    text: text,
+    width: 260,
+    height: 260,
+    colorDark : "#3b3f44",
+    colorLight : "#ffffff",
+    correctLevel : QRCode.CorrectLevel.H
+  });
+}
+
+function restart(){
+  if(confirm('確定要重新拍攝嗎？資料將會遺失。')){
+    location.href = 'booth-duo-ipad.html';
+  }
+}
+
+(function(){
+  function setVH(){
+    document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
+  }
+  window.addEventListener('resize', setVH);
+  setVH();
+  
+  setTimeout(composeDynamicVideo, 500);
+})();
+
+</script>
+</body>
+</html>
