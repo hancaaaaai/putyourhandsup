@@ -8,6 +8,33 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
+  /* === 自訂鼠標樣式 === */
+  /* 隱藏預設鼠標，包含留言牆的小人、輸入框等 */
+  body, button, input, .person, .zone, .ui-layer { 
+    cursor: none !important; 
+  }
+
+  #fake-cursor {
+    /* ★★★ 這裡控制大小，想變大改這裡的數字 ★★★ */
+    width: 100px; 
+    height: 100px;
+    
+    position: fixed; top: 0; left: 0; 
+    pointer-events: none; z-index: 99999; will-change: transform;
+  }
+  
+  #fake-cursor-img {
+    width: 100%; height: 100%;
+    background-image: url('cursor.png'); /* 確認圖片路徑 */
+    background-size: contain; background-repeat: no-repeat;
+    transform-origin: center 80%;
+  }
+  
+  #fake-cursor.is-clicking #fake-cursor-img {
+    background-image: url('cursor-click.png'); /* 確認圖片路徑 */
+    transform: rotate(-5deg);
+  }
   * { box-sizing: border-box; }
   body { 
     font-family: "Manrope", "Noto Sans TC", sans-serif; 
@@ -25,12 +52,12 @@
     background-image: radial-gradient(#ddd 1px, transparent 1px);
     background-size: 30px 30px;
     display: flex; justify-content: center; align-items: center; 
-    padding-bottom: 60px; 
+    padding-bottom: 120px; /* 這裡要避開變高的底部輸入列 */
   }
 
   /* === 廣場網格 === */
   .plaza {
-    width: 95vw; height: 85vh; 
+    width: 95vw; height: 80vh; /*稍微縮小一點高度給底部*/
     display: grid; 
     grid-template-columns: repeat(5, 1fr); 
     grid-template-rows: repeat(4, 1fr);
@@ -56,77 +83,101 @@
     pointer-events: none; z-index: 0;
   }
 
-  /* === 小人樣式 === */
+  /* === 小人樣式 (去背版) === */
   .person {
     position: absolute;
     display: flex; flex-direction: column; align-items: center;
-    width: 40px; z-index: 10;
+    width: 80px; 
+    z-index: 10;
     transition: transform 0.2s, z-index 0.2s;
     cursor: pointer;
   }
-  .person:hover { z-index: 100 !important; transform: scale(1.5); }
+  .person:hover { z-index: 100 !important; transform: scale(1.2); }
 
-  .avatar {
-    width: 34px; height: 34px; 
-    background: #fff; border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  /* 透明容器 */
+  .avatar-video-box {
+    width: 80px; height: 80px; 
+    background: transparent; 
+    border: none; 
+    border-radius: 0; 
+    box-shadow: none; 
+    
     display: flex; justify-content: center; align-items: center;
-    font-size: 18px; border: 2px solid #fff;
+    position: relative;
+    overflow: visible; 
   }
   
-  .bubble {
-    background: #fff; padding: 3px 6px; border-radius: 6px;
-    font-size: 12px; font-weight: 700; color: #333;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 2px; position: relative;
-    max-width: 100px; 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    opacity: 0.9;
+  /* 影片本體 */
+  .avatar-video-box video {
+    width: 100%; height: 100%;
+    object-fit: contain; 
+    transform: scale(1); 
   }
-  .person:hover .bubble { white-space: normal; overflow: visible; z-index: 101; min-width: 80px;}
+
+  .bubble {
+    background: #fff; padding: 4px 8px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; color: #333;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 0px; 
+    position: relative;
+    max-width: 120px; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0.95;
+    text-align: center;
+  }
+  .person:hover .bubble { white-space: normal; overflow: visible; z-index: 101; min-width: 90px;}
   .bubble::after {
     content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
     border-width: 4px 4px 0; border-style: solid; border-color: #fff transparent transparent;
   }
 
-  /* 隨機顏色 */
-  .style-0 .avatar { border-color: #ff8a80; background: #ffebee; }
-  .style-1 .avatar { border-color: #ffd180; background: #fff3e0; }
-  .style-2 .avatar { border-color: #ffff8d; background: #fffde7; }
-  .style-3 .avatar { border-color: #ccff90; background: #f1f8e9; }
-  .style-4 .avatar { border-color: #a7ffeb; background: #e0f7fa; }
-  .style-5 .avatar { border-color: #80d8ff; background: #e1f5fe; }
-  .style-6 .avatar { border-color: #82b1ff; background: #e3f2fd; }
-  .style-7 .avatar { border-color: #b388ff; background: #ede7f6; }
-  .style-8 .avatar { border-color: #f48fb1; background: #fce4ec; }
-  .style-9 .avatar { border-color: #cfd8dc; background: #eceff1; }
-
-  /* === UI 固定層 === */
+  /* === UI 固定層 (底部加大) === */
   .ui-layer {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     pointer-events: none; z-index: 500;
   }
   .ui-layer > * { pointer-events: auto; }
 
+  /* ★★★ 修改重點：加高底部輸入列 ★★★ */
   .input-bar {
-    position: absolute; bottom: 0; left: 0; width: 100%; height: 70px;
+    position: absolute; bottom: 0; left: 0; width: 100%; 
+    height: 120px; /* 從 70px 加大到 120px */
     background: rgba(255,255,255,0.9); padding: 0 40px;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
     display: flex; align-items: center; gap: 20px; 
     backdrop-filter: blur(8px);
     border-top: 1px solid #eee;
   }
+  
+  /* 標籤字體加大 */
   .role-badge { 
-    background: #333; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: bold; white-space: nowrap; font-size: 14px;
+    background: #333; color: #fff; padding: 8px 18px; border-radius: 30px; 
+    font-weight: bold; white-space: nowrap; font-size: 18px; /* 加大 */
   }
+  
+  /* 輸入框加大 */
   input { 
-    flex-grow: 1; padding: 10px; font-size: 16px; border: 2px solid #eee; border-radius: 50px; outline: none; 
+    flex-grow: 1; padding: 15px 25px; 
+    font-size: 24px; /* 字體加大 */
+    border: 3px solid #eee; border-radius: 60px; outline: none; 
+    height: 70px; /* 輸入框高度 */
   }
+  
+  /* 送出按鈕加大 */
   button.send { 
-    padding: 10px 25px; border-radius: 50px; border: 0; background: #ffdd00; font-weight: 900; font-size: 16px; cursor: pointer; 
+    padding: 15px 35px; border-radius: 60px; border: 0; 
+    background: #ffdd00; font-weight: 900; 
+    font-size: 22px; /* 字體加大 */
+    cursor: pointer; 
   }
+  
+  /* 首頁按鈕加大 */
   button.home {
-    padding: 10px; border-radius: 50%; border: 2px solid #eee; background: #fff; cursor: pointer; font-size: 18px;
+    padding: 15px; border-radius: 50%; border: 3px solid #eee; 
+    background: #fff; cursor: pointer; 
+    font-size: 24px; /* 加大 */
+    width: 70px; height: 70px;
+    display: flex; align-items: center; justify-content: center;
   }
 
   .sidebar {
@@ -159,22 +210,16 @@
   .rank-name { font-weight: 700; flex-grow: 1; text-align: left; font-size: 15px; }
   .rank-count { font-weight: 900; color: #ff8a80; background: #fff0f0; padding: 4px 8px; border-radius: 8px; font-size: 13px;}
 
-  /* ★★★ 真正的隱形按鈕 ★★★ */
   #secret-btn {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100px; height: 100px; /* 左上角 100x100 區域 */
-    z-index: 9999;
-    background: transparent; /* 完全透明 */
-    cursor: default; /* 保持預設游標，不讓使用者發現 */
+    position: fixed; top: 0; left: 0; width: 100px; height: 100px; z-index: 9999;
+    background: transparent; cursor: default; 
   }
 </style>
 </head>
 <body>
 
   <div class="viewport">
-    <div class="plaza" id="plaza">
-      </div>
+    <div class="plaza" id="plaza"></div>
   </div>
 
   <div id="secret-btn" onclick="handleSecretClick()"></div>
@@ -197,10 +242,10 @@
       </div>
     </div>
   </div>
-
+<div id="fake-cursor"><div id="fake-cursor-img"></div></div>
 <script>
   // ==========================================
-  // 1. 設定：20 種結果名稱
+  // 1. 設定：20 種結果名稱 (對應格子)
   // ==========================================
   const roleList = [
     "淘氣", "幽默", "活潑", "大方",
@@ -232,8 +277,6 @@
 
   function handleSecretClick() {
     secretClicks++;
-    
-    // 如果點太慢(超過0.5秒)就重算
     clearTimeout(secretTimer);
     secretTimer = setTimeout(() => { secretClicks = 0; }, 500);
 
@@ -251,30 +294,36 @@
   // 3. 資料與渲染
   // ==========================================
   const myData = JSON.parse(localStorage.getItem('photobooth_template') || '{}');
-  const myRole = myData.role || '未測驗路人';
+  const myRole = myData.role || '淘氣女'; 
   document.getElementById('my-role').textContent = myRole;
 
   let messages = JSON.parse(localStorage.getItem('guestbook_messages') || '[]');
   
+  // ★★★ 修改重點：預設 3 個留言 ★★★
   if(messages.length === 0) {
     messages = [
-      { role: '淘氣', text: '我是淘氣鬼！', time: '10:00' },
-      { role: '溫柔', text: '大家好～', time: '10:05' },
-      { role: '聰明', text: '這裡可以看到全部', time: '10:08' },
-      { role: '勇敢', text: '我不怕！', time: '10:10' }
+      { role: '淘氣男', text: '我是淘氣鬼！', time: '10:00' },
+      { role: '溫柔女', text: '大家好～', time: '10:05' },
+      { role: '聰明男', text: '這裡可以看到全部', time: '10:08' }
     ];
     localStorage.setItem('guestbook_messages', JSON.stringify(messages));
   }
 
   function renderCrowd() {
+    // 1. 重置所有格子的內容 (只保留標籤)
     document.querySelectorAll('.zone').forEach(z => {
       const label = z.querySelector('.zone-label');
       z.innerHTML = ''; 
       if(label) z.appendChild(label);
     });
 
+    // 2. 渲染每一個留言的小人
     messages.forEach((msg, idx) => {
-      let roleIndex = roleList.indexOf(msg.role);
+      const fullRole = msg.role; 
+      const adjective = fullRole.replace(/[男女]$/, '');
+      
+      let roleIndex = roleList.indexOf(adjective);
+      if(roleIndex === -1) roleIndex = roleList.indexOf(fullRole);
       if(roleIndex === -1) roleIndex = 19; 
 
       const container = document.getElementById(`zone-${roleIndex}`);
@@ -284,6 +333,7 @@
       const styleIdx = roleIndex % 10; 
       person.className = `person style-${styleIdx}`;
       
+      // 隨機位置計算
       const hash = msg.text.length + idx * 113; 
       const randX = (hash * 37 % 70) + 15; 
       const randY = (hash * 59 % 60) + 20; 
@@ -292,12 +342,15 @@
       person.style.top = `${randY}%`;
       person.style.zIndex = idx + 10;
 
-      const emojis = ['😃','😎','🧐','😊','🤠','🥳','😍','🤔'];
-      const emoji = emojis[hash % emojis.length];
+      // 影片路徑
+      const videoSrc = `video/${fullRole}/1.webm`;
 
+      // 插入 HTML：完全透明的容器
       person.innerHTML = `
         <div class="bubble">${msg.text}</div>
-        <div class="avatar">${emoji}</div>
+        <div class="avatar-video-box">
+          <video src="${videoSrc}" autoplay loop muted playsinline></video>
+        </div>
       `;
       container.appendChild(person);
     });
@@ -312,7 +365,7 @@
     if(!text) return;
     
     const newMsg = {
-      role: myRole,
+      role: myRole, // 儲存 "形容詞+性別"
       text: text,
       time: new Date().toLocaleTimeString()
     };
@@ -333,7 +386,8 @@
   function updateStats() {
     const counts = {};
     messages.forEach(m => { 
-      const name = roleList.includes(m.role) ? m.role : '其他';
+      const adjective = m.role.replace(/[男女]$/, '');
+      const name = roleList.includes(adjective) ? adjective : '其他';
       counts[name] = (counts[name] || 0) + 1; 
     });
     
@@ -379,9 +433,31 @@
     }
   }
 
+  // 啟動
   renderCrowd();
   updateStats();
+// === 自訂鼠標控制 ===
+  (function(){
+    const cursor = document.getElementById('fake-cursor');
+    let mouseX = -100, mouseY = -100; 
+    let curX = -100, curY = -100;
 
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    document.addEventListener('mousedown', () => cursor.classList.add('is-clicking'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('is-clicking'));
+
+    function renderCursor() {
+      curX += (mouseX - curX) * 0.2;
+      curY += (mouseY - curY) * 0.2;
+      cursor.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
+      requestAnimationFrame(renderCursor);
+    }
+    renderCursor();
+  })();
 </script>
 </body>
 </html>

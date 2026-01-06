@@ -8,6 +8,33 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
   <style>
+
+    /* === 自訂鼠標樣式 === */
+  /* 隱藏預設鼠標，包含留言牆的小人、輸入框等 */
+  body, button, input, .person, .zone, .ui-layer { 
+    cursor: none !important; 
+  }
+
+  #fake-cursor {
+    /* ★★★ 這裡控制大小，想變大改這裡的數字 ★★★ */
+    width: 100px; 
+    height: 100px;
+    
+    position: fixed; top: 0; left: 0; 
+    pointer-events: none; z-index: 99999; will-change: transform;
+  }
+  
+  #fake-cursor-img {
+    width: 100%; height: 100%;
+    background-image: url('cursor.png'); /* 確認圖片路徑 */
+    background-size: contain; background-repeat: no-repeat;
+    transform-origin: center 80%;
+  }
+  
+  #fake-cursor.is-clicking #fake-cursor-img {
+    background-image: url('cursor-click.png'); /* 確認圖片路徑 */
+    transform: rotate(-5deg);
+  }
     /* === 基礎設定 === */
     *{box-sizing:border-box;-webkit-user-select:none;user-select:none;}
     html,body{height:100%;margin:0;background:#fff;color:#3b3f44;font-family:"Manrope","Noto Sans TC",sans-serif;overscroll-behavior:none;}
@@ -133,22 +160,19 @@
 <div id="source-videos">
     <video id="template-video" src="video/拍貼模板_透明.webm" loop muted playsinline crossorigin="anonymous"></video>
 </div>
-
+<div id="fake-cursor"><div id="fake-cursor-img"></div></div>
 <script>
 // ==========================================
 // 1. 設定與初始化
 // ==========================================
 
-// ★ 修改點：針對 1080x1920 的透明橫式模板重新設定座標
+// ★ 修改點：針對 1080x1920 的透明橫式模板重新設定座標 (2格)
 // X=40, W=1000 (左右各留40px邊距)
-// Y位置依照上中下分佈
 const CLIP_POSITIONS = [
-  // 上方框 (動作1)
-  { x: 60, y: 350, w: 1000, h: 500, rotate: 0 }, 
-  // 中間框 (動作2)
-  { x: 40, y: 850, w: 1000, h: 500, rotate: 0 },  
-  // 下方框 (動作3)
-  { x: 40, y: 1350, w: 1000, h: 500, rotate: 0 }  
+  // 第 1 格：上方框 (形容詞)
+  { x: 40, y: 750, w: 1000, h: 500, rotate: 0 }, 
+  // 第 2 格：下方框 (性別)
+  { x: 40, y: 1250, w: 1000, h: 500, rotate: 0 }  
 ];
 
 const canvas = document.getElementById('resultCanvas');
@@ -157,7 +181,15 @@ canvas.width = 1080;
 canvas.height = 1920;
 
 const templateVideo = document.getElementById('template-video');
-
+try {
+  const savedData = JSON.parse(localStorage.getItem('photobooth_template'));
+  if (savedData && savedData.role) {
+    // 設定該角色的模板路徑
+    templateVideo.src = `video/${savedData.role}/template.webm`;
+  }
+} catch (e) {
+  console.log("讀取角色模板失敗，使用預設值");
+}
 // ==========================================
 // 2. 資料庫與載入工具
 // ==========================================
@@ -222,17 +254,36 @@ async function composeDynamicVideo() {
   const container = document.getElementById('source-videos');
   const statusText = document.getElementById('status-text');
 
-  // 1. 載入使用者拍攝的 3 個片段
+  // ★ 修改點：判斷要抓取哪些片段放入這 2 個格子
+  // 1. 讀取「總拍攝段數」
+  const totalClips = parseInt(localStorage.getItem('booth_clip_count') || '2');
+  
+  let targetIndices = [];
+
+  if (totalClips === 3) {
+    // === 情況 A：複雜角色 (拍了 3 段: 0, 1, 2) ===
+    // 預設策略：取第 2 段(index 1) 和 第 3 段(index 2)
+    // index 1 通常是較完整的動作分解，index 2 是性別
+    targetIndices = [1, 2]; 
+  } else {
+    // === 情況 B：一般角色 (拍了 2 段: 0, 1) ===
+    // 取第 1 段(index 0) 和 第 2 段(index 1)
+    targetIndices = [0, 1];
+  }
+
+  // 2. 載入對應的影片片段
   const userClips = [];
-  for(let i=0; i<3; i++) {
-    const v = await loadVideoClip(`clip_${i}`, container);
+  // 我們只跑 2 次迴圈，因為 CLIP_POSITIONS 只有 2 格
+  for(let i=0; i<2; i++) {
+    const dbKey = `clip_${targetIndices[i]}`;
+    const v = await loadVideoClip(dbKey, container);
     userClips.push(v);
   }
   
-  // 2. 載入動態模板
+  // 3. 載入動態模板
   await loadTemplate();
   
-  // 3. 開始渲染迴圈 (Render Loop)
+  // 4. 開始渲染迴圈 (Render Loop)
   function render() {
     // A. 清空畫布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -242,6 +293,7 @@ async function composeDynamicVideo() {
     
     // B. 先繪製使用者的影片 (在底層)
     userClips.forEach((v, index) => {
+      // 確保影片存在且有對應的座標設定
       if(v && CLIP_POSITIONS[index]) {
         const pos = CLIP_POSITIONS[index];
         drawVideo(ctx, v, pos.x, pos.y, pos.w, pos.h, pos.rotate);
@@ -249,7 +301,6 @@ async function composeDynamicVideo() {
     });
     
     // C. 再繪製動態模板 (在上層，因為是透明的)
-    // 確保模板影片已經準備好
     if (templateVideo.readyState >= 2) {
         ctx.drawImage(templateVideo, 0, 0, canvas.width, canvas.height);
     }
@@ -260,7 +311,7 @@ async function composeDynamicVideo() {
   render(); // 啟動畫面更新
   statusText.textContent = "預覽播放中，正在背景生成檔案...";
 
-  // 4. 開始錄製 Canvas 成為最終檔案
+  // 5. 開始錄製 Canvas 成為最終檔案
   startCanvasRecording();
 }
 
@@ -331,7 +382,7 @@ function startCanvasRecording() {
   
   recorder.start();
   
-  // ★ 修改點：錄製 13.1 秒 (確保涵蓋模板的動態循環)
+  // 錄製 13.1 秒 (確保涵蓋模板的動態循環)
   setTimeout(() => {
     recorder.stop();
   }, 13100);
@@ -365,7 +416,28 @@ function restart(){
   
   setTimeout(composeDynamicVideo, 500);
 })();
+// === 自訂鼠標控制 ===
+  (function(){
+    const cursor = document.getElementById('fake-cursor');
+    let mouseX = -100, mouseY = -100; 
+    let curX = -100, curY = -100;
 
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    document.addEventListener('mousedown', () => cursor.classList.add('is-clicking'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('is-clicking'));
+
+    function renderCursor() {
+      curX += (mouseX - curX) * 0.2;
+      curY += (mouseY - curY) * 0.2;
+      cursor.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
+      requestAnimationFrame(renderCursor);
+    }
+    renderCursor();
+  })();
 </script>
 </body>
 </html>

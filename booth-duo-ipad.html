@@ -12,20 +12,35 @@ html,body{
   font-family:"Noto Sans TC",system-ui;
 }
 *{user-select:none;-webkit-user-select:none;}
+/* 加入在原本 style 的最後面即可 */
+body, button, .startBtn { cursor: none !important; }
 
-/* 修改：強制全螢幕，不留黑邊 */
+#fake-cursor { 
+  position: fixed; top: 0; left: 0; width: 100px; height: 100px; 
+  pointer-events: none; z-index: 99999; will-change: transform; 
+}
+#fake-cursor-img { 
+  width: 100%; height: 100%; 
+  background-image: url('cursor.png'); 
+  background-size: contain; background-repeat: no-repeat; 
+  transform-origin: center 80%; 
+}
+#fake-cursor.is-clicking #fake-cursor-img { 
+  background-image: url('cursor-click.png'); 
+  transform: rotate(-5deg); 
+}
+/* 強制全螢幕 */
 .stage {
-  width: 100vw;   /* 視窗寬度 100% */
-  height: 100vh;  /* 視窗高度 100% */
+  width: 100vw;   
+  height: 100vh;  
   position: relative;
   background: #000;
-  overflow: hidden; /* 防止捲軸出現 */
+  overflow: hidden; 
 }
 
 #composite-canvas {
   width: 100%;
   height: 100%;
-  /* 關鍵：cover 會讓畫面填滿整個螢幕，可能會裁切掉一點邊緣，但絕對不會有黑邊 */
   object-fit: cover; 
   display: block;
 }
@@ -38,108 +53,108 @@ html,body{
   z-index: -1;
 }
 
-/* ★ 修改點：右側半身引導框 (Overlay) */
-/* ★ 修改點：右側半身引導框 (人形圖示風格) */
+/* 右側半身引導框 */
 .guide-box {
   position: absolute;
   bottom: 0; 
-  right: 20%; /* 位置 */
-  width: 500px; /* 身體寬度 */
-  height: 60%;  /* 身體高度 */
-  
-  /* 畫出身體：上方圓弧，下方直角 */
-  border: 4px dashed rgba(255, 255, 255, 0.3); /* 淡淡的白色虛線 */
+  right: 20%; 
+  width: 500px; 
+  height: 60%;  
+  border: 4px dashed rgba(255, 255, 255, 0.3); 
   border-bottom: none; 
-  border-radius: 250px 250px 0 0; /* 讓頂部變成半圓拱形 */
-  
+  border-radius: 250px 250px 0 0; 
   pointer-events: none; 
   z-index: 50; 
-  /* 移除原本的陰影，讓畫面更清爽 */
   box-shadow: none;
 }
 
-/* ★ 修改點：利用偽元素畫出「頭部」 */
 .guide-box::before {
-  content: ""; /* 把原本的文字拿掉，只留形狀 */
+  content: ""; 
   position: absolute;
-  
-  /* 頭部的大小與位置 */
   width: 180px; 
   height: 180px;
-  top: -220px; /* 往上推，與身體分開 */
+  top: -220px; 
   left: 50%;
-  transform: translateX(-50%); /* 置中 */
-  
-  /* 頭部的樣式 */
-  border: 4px dashed rgba(255, 255, 255, 0.3); /* 跟身體一樣淡淡的 */
-  border-radius: 50%; /* 圓形 */
+  transform: translateX(-50%); 
+  border: 4px dashed rgba(255, 255, 255, 0.3); 
+  border-radius: 50%; 
 }
 
-/* ★ 修改點：胸前手勢提示區 (變淡、變文字為主) */
+/* 胸前手勢文字提示區 */
 .hand-area {
   position: absolute;
-  top: 10%; /* 在身體框框內的相對位置，大約胸口 */
+  top: 10%; 
   left: 50%;
   transform: translateX(-50%);
   width: 80%;
   height: 200px;
-  
- /* 這裡改成 none，就看不到框框了 */
   border: none; 
   background: transparent;
-  
   display: flex; justify-content: center; align-items: center;
+  z-index: 60;
 }
 
 .hand-area span {
-  /* 文字樣式：淡淡的白字 */
-  background: rgba(0, 0, 0, 0.2); /* 極淡的黑底襯托文字 */
+  background: rgba(0, 0, 0, 0.2); 
   padding: 8px 20px;
   border-radius: 50px;
-  color: rgba(255, 255, 255, 0.7); /* 淡淡的白色 */
-  font-weight: 500; /* 字體不用太粗 */
+  color: rgba(255, 255, 255, 0.7); 
+  font-weight: 500; 
   font-size: 24px;
   letter-spacing: 2px;
+  white-space: nowrap;
 }
 
-/* 左上角狀態列 */
-.top-status {
-  position: absolute; top: 30px; left: 30px; z-index: 100;
-  display: flex; align-items: center; gap: 15px;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 15px 30px; border-radius: 50px;
-  backdrop-filter: blur(10px);
-  color: #fff; font-weight: 900; font-size: 32px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  transition: 0.3s;
+/* --- 動態提示色塊 (黃色光圈) --- */
+.pose-block {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.363); /* 半透明黃色 */
+  border: 0px dashed rgba(255, 255, 255, 0.514); /* 白色虛線 */
+  border-radius: 10%;
+  box-shadow: 0 0 0px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 55;
+  animation: floatBlock 2s infinite ease-in-out;
 }
 
-/* 錄影紅點 */
-.rec-dot {
-  width: 24px; height: 24px; background: #ff3b30; border-radius: 50%;
-  display: none; 
-}
-.recording .rec-dot { display: block; animation: pulse 1s infinite; }
-.recording { border: 2px solid rgba(255, 59, 48, 0.5); background: rgba(50, 0, 0, 0.6); }
-
-@keyframes pulse { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
-
-/* 閃光燈效果 */
-.flash{
-  position:absolute; inset:0; background:#fff; opacity:0; transition:.12s; z-index: 60; pointer-events: none;
+@keyframes floatBlock {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
 }
 
-/* 準備畫面遮罩 */
+/* 標題遮罩 */
 .loading{
   position:absolute; inset:0; display:flex; flex-direction: column;
   justify-content: center; align-items: center; gap: 20px;
   background:rgba(0,0,0,.7); color:#fff;
-  opacity:0; transition:.2s; z-index: 70; pointer-events: none;
+  opacity:0; transition:.5s; z-index: 70; pointer-events: none;
   backdrop-filter: blur(5px);
 }
 .loading h2 { font-size: 60px; margin: 0; font-weight: 900; }
 .loading p { font-size: 32px; margin: 0; opacity: 0.9; }
 .show{opacity:1; pointer-events:auto;}
+
+/* 中央提示文字 (練習時間 / 倒數 / 拍攝中) */
+.center-status {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: transparent; 
+  border: none;
+  color: rgba(255, 255, 255, 0.8); 
+  text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  font-size: 60px;
+  font-weight: 900;
+  letter-spacing: 5px;
+  pointer-events: none;
+  z-index: 90;
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-align: center;
+}
+.center-status.active {
+  opacity: 1;
+}
 
 /* 開始按鈕 */
 .startBtn{
@@ -157,8 +172,10 @@ html,body{
   <canvas id="composite-canvas" width="1920" height="1080"></canvas>
   
   <div class="guide-box">
+    <div id="pose-container"></div>
+    
     <div class="hand-area">
-      <span>手放胸前</span>
+      <span id="hand-msg">手放胸前</span>
     </div>
   </div>
 
@@ -166,20 +183,17 @@ html,body{
   <video id="char-video" loop muted playsinline crossorigin="anonymous"></video>
   <img id="char-img" style="display:none;" crossorigin="anonymous">
   
-  <div id="status-bar" class="top-status">
-    <div class="rec-dot"></div>
-    <span id="status-text">準備中</span>
-  </div>
-
-  <div id="flash" class="flash"></div>
-
   <div id="loading" class="loading">
     <h2 id="msg-title">準備中...</h2>
     <p id="msg-sub">請稍候</p>
   </div>
 
+  <div id="center-status" class="center-status">3</div>
+
   <button id="start" class="startBtn">📸 開始動態拍貼</button>
 </div>
+
+<div id="fake-cursor"><div id="fake-cursor-img"></div></div>
 
 <script>
 /* =====================
@@ -231,26 +245,116 @@ try {
   console.log("讀取角色失敗，使用預設值");
 }
 
-const SEQUENCE = [
-  {
-    title: '動作 1',
-    sub: '請跟著小人做：雙手面對面',
-    type: 'image', 
-    src: `video/${currentRole}_1.png` 
+// === 角色動作位置設定 (20種個性) ===
+const baseRole = currentRole.replace(/[男女]$/, '');
+
+const POSE_DATA = {
+  // 1. 活潑 (頭兩旁)
+  '活潑': { 
+    text: '手在頭兩旁，頭左右搖晃', 
+    blocks: [
+      { top: '-180px', left: '30px', w: '120px', h: '120px' },
+      { top: '-180px', right: '30px', w: '120px', h: '120px' }
+    ] 
   },
-  {
-    title: '動作 2',
-    sub: '上下動雙手，手指靈動',
-    type: 'video',
-    src: `video/${currentRole}_2.webm`
+  // 2. 聰明 (頭單邊)
+  '聰明': { 
+    text: '手在頭旁邊', 
+    blocks: [ { top: '-180px', right: '-40px', w: '120px', h: '120px' } ] 
   },
-  {
-    title: '動作 3',
-    sub: '最後一張：翹起小拇指',
-    type: 'video',
-    src: `video/${currentRole}_3.webm`
+  // 3. 害羞 (遮臉 + 臉旁)
+  '害羞': { 
+    text: '一手遮臉，一手在臉旁邊', 
+    blocks: [
+      { top: '-200px', left: '36%', w: '140px', h: '140px' }, // 臉中
+      { top: '-150px', right: '350px', w: '100px', h: '100px' } // 臉旁
+    ] 
+  },
+  // 4. 敏銳 (頭旁 + 胸前)
+  '敏銳': {
+    text: '手先在頭旁邊，再滑過到胸前',
+    blocks: [
+      { top: '-180px', right: '310px', w: '100px', h: '100px' },
+      { top: '15%', left: '30%', w: '40%', h: '30%' }
+    ]
+  },
+  // 5. 幽默 (腰兩旁)
+  '幽默': { 
+    text: '手在腰兩旁', 
+    blocks: [
+      { top: '60%', left: '-40px', w: '120px', h: '120px' },
+      { top: '60%', right: '-40px', w: '120px', h: '120px' }
+    ] 
+  },
+  // 6. 勇敢 (腰前)
+  '勇敢': {
+    text: '手在腰前',
+    blocks: [ { top: '60%', left: '25%', w: '50%', h: '25%' } ]
+  },
+  // 7. 預設胸前 (包含剩下的所有角色，以及比性別時使用)
+  'default': { 
+    text: '手在胸前', 
+    blocks: [ { top: '15%', left: '20%', w: '60%', h: '30%' } ] 
   }
+};
+
+const chestRoles = [
+  '淘氣', '大方', '冷靜', '文靜', '沉穩', '溫柔', 
+  '善良', '耐心', '樂觀', '自信', '果斷', '獨立', 
+  '細心', '謹慎'
 ];
+
+chestRoles.forEach(role => {
+  POSE_DATA[role] = POSE_DATA['default'];
+});
+
+// ★★★ 修改重點：渲染提示框函式 (新增 forceChest 參數) ★★★
+function renderPoseGuide(forceChest = false) {
+  const handMsgEl = document.getElementById('hand-msg');
+  const container = document.getElementById('pose-container');
+  
+  // 如果 forceChest 為 true (代表正在比性別)，強制使用 default 設定
+  // 否則使用角色的設定
+  const config = forceChest ? POSE_DATA['default'] : (POSE_DATA[baseRole] || POSE_DATA['default']);
+
+  if(handMsgEl) handMsgEl.textContent = config.text;
+
+  if(container) {
+    container.innerHTML = '';
+    config.blocks.forEach(b => {
+      const div = document.createElement('div');
+      div.className = 'pose-block';
+      if(b.top) div.style.top = b.top;
+      if(b.bottom) div.style.bottom = b.bottom;
+      if(b.left) div.style.left = b.left;
+      if(b.right) div.style.right = b.right;
+      div.style.width = b.w;
+      div.style.height = b.h;
+      container.appendChild(div);
+    });
+  }
+}
+
+// 初始先渲染一次角色預設 (第一段)
+renderPoseGuide(false);
+
+// === 影片順序設定 ===
+const COMPLEX_ROLES = [ '自信女', '自信男', '果斷女', '果斷男', '獨立女', '獨立男' ];
+const isComplex = COMPLEX_ROLES.includes(currentRole);
+let SEQUENCE = [];
+
+if (isComplex) {
+  SEQUENCE = [
+    { title: '動作 1', sub: '請跟著小人做：手語動作分解(一)', type: 'video', src: `video/${currentRole}/1.webm` },
+    { title: '動作 2', sub: '動作流暢連結：手語動作分解(二)', type: 'video', src: `video/${currentRole}/2.webm` },
+    { title: '動作 3', sub: '最後一張：比出你的性別', type: 'video', src: `video/${currentRole}/3.webm` }
+  ];
+} else {
+  SEQUENCE = [
+    { title: '動作 1', sub: '請跟著小人做：比出形容詞手語', type: 'video', src: `video/${currentRole}/1.webm` },
+    { title: '動作 2', sub: '最後一張：比出你的生理性別', type: 'video', src: `video/${currentRole}/2.webm` }
+  ];
+}
 
 const cam = document.getElementById('cam');
 const charVideo = document.getElementById('char-video');
@@ -259,13 +363,11 @@ const ctx = canvas.getContext('2d');
 const charImg = document.getElementById('char-img');
 let currentMediaType = 'video'; 
 
-const flash = document.getElementById('flash');
 const loading = document.getElementById('loading');
 const msgTitle = document.getElementById('msg-title');
 const msgSub = document.getElementById('msg-sub');
 const startBtn = document.getElementById('start');
-const statusBar = document.getElementById('status-bar');
-const statusText = document.getElementById('status-text');
+const centerStatus = document.getElementById('center-status');
 
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 let stream = null;
@@ -274,6 +376,11 @@ let fullRecorder = null;
 let fullChunks = [];
 let shooting = false;
 let animationId = null;
+
+const charBuffer = document.createElement('canvas');
+charBuffer.width = 1920;
+charBuffer.height = 1080;
+const charBufferCtx = charBuffer.getContext('2d');
 
 /* =====================
    2. 畫面合成邏輯
@@ -296,25 +403,23 @@ function startCanvasLoop() {
     ctx.restore();
 
     // 2. 繪製角色
-// 2. 繪製角色
-    // ▼▼▼▼▼▼▼▼▼▼ 調整這裡的數字 ▼▼▼▼▼▼▼▼▼▼
-    const scale = 0.85;       // 大小：0.85 代表佔畫面高度的 85% (數字越小人越小)
-    const marginLeft = 90;    // 水平位置：距離左邊界多少像素 (數字越大越往右)
-    const marginBottom = -170; // 垂直位置：距離底部多少像素 (正數往上浮，負數往下沉)
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    const scale = 1;       
+    const marginLeft = 90;    
+    const marginBottom = -180; 
 
     const charH = canvas.height * scale; 
-    // 計算 Y 座標 (畫布高度 - 角色高度 - 底部留白)
     const y = canvas.height - charH - marginBottom;
-    
-    // 統一設定 X 座標
     const x = marginLeft;
 
     if (currentMediaType === 'video') {
-       if (charVideo.readyState >= 2 && !charVideo.paused && !charVideo.ended && charVideo.currentTime > 0) {
+       if (charVideo.videoWidth > 0 && charVideo.videoHeight > 0) {
+          if (charVideo.readyState >= 3) {
+             charBufferCtx.clearRect(0, 0, charBuffer.width, charBuffer.height);
+             charBufferCtx.drawImage(charVideo, 0, 0, charBuffer.width, charBuffer.height);
+          }
           const ratio = charVideo.videoWidth / charVideo.videoHeight;
-          const charW = charH * ratio; // 根據高度自動算出寬度，保持比例
-          ctx.drawImage(charVideo, x, y, charW, charH);
+          const charW = charH * ratio; 
+          ctx.drawImage(charBuffer, 0, 0, charBuffer.width, charBuffer.height, x, y, charW, charH);
        }
     } 
     else if (currentMediaType === 'image') {
@@ -326,7 +431,6 @@ function startCanvasLoop() {
     }
     animationId = requestAnimationFrame(draw);
   }
-  
   draw();
 }
 
@@ -338,10 +442,8 @@ async function startCamera(){
     });
     cam.srcObject = stream;
     await cam.play();
-    
     startCanvasLoop();
     canvasStream = canvas.captureStream(30);
-    
   } catch (err) {
     console.error("相機失敗", err);
     alert("無法啟動相機");
@@ -349,12 +451,11 @@ async function startCamera(){
 }
 
 /* =====================
-   3. 流程控制
+   3. 流程控制工具
 ===================== */
 
 function setStepUI(index) {
   const step = SEQUENCE[index];
-  
   currentMediaType = step.type;
 
   if (step.type === 'image') {
@@ -374,19 +475,25 @@ function setStepUI(index) {
   loading.classList.add('show');
 }
 
-async function countdown(){
-  loading.classList.remove('show'); 
-  statusBar.classList.remove('recording');
-  
-  for(let i=5; i>0; i--){
-    statusText.textContent = `準備... ${i}`;
-    await sleep(1000);
+async function waitVideoLoops(loops = 3) {
+  if (currentMediaType === 'video') {
+    if (charVideo.readyState < 1) {
+       await new Promise(r => charVideo.onloadedmetadata = r);
+    }
+    const duration = charVideo.duration;
+    const oneLoopTime = (duration && duration !== Infinity) ? duration * 1000 : 3000;
+    await sleep(oneLoopTime * loops);
+  } else {
+    await sleep(5000);
   }
 }
 
-function shutterFX(){
-  flash.classList.add('show');
-  setTimeout(()=>flash.classList.remove('show'), 150);
+async function countdownCenter(){
+  centerStatus.classList.add('active');
+  for(let i=3; i>0; i--){
+    centerStatus.textContent = i;
+    await sleep(1000);
+  }
 }
 
 function recordClip(duration = 2500) {
@@ -430,7 +537,7 @@ function stopFullRecording(){
 }
 
 /* =====================
-   4. 主流程
+   4. 主流程 (Shoot)
 ===================== */
 async function shoot(){
   if(shooting) return;
@@ -438,27 +545,43 @@ async function shoot(){
   startBtn.style.display = 'none';
 
   if(!stream) await startCamera();
-  
   await sleep(500);
+  
   startFullRecording();
 
-  for(let i=0; i<3; i++) {
-    statusText.textContent = `動作 ${i+1}`;
+  const totalSteps = SEQUENCE.length;
+
+  for(let i=0; i<totalSteps; i++) {
+    // ★★★ 修改：動態更新提示框 ★★★
+    // 判斷是否為最後一步 (性別)
+    const isGenderStep = (i === totalSteps - 1);
+    // 如果是最後一步，強制顯示胸前提示；否則顯示角色專屬提示
+    renderPoseGuide(isGenderStep);
+
+    // 1. 標題與畫面設定
     setStepUI(i);
-    await sleep(3000); 
+    await sleep(2000);
     
-    await countdown(); 
+    // 2. 練習時間
+    loading.classList.remove('show');
+    centerStatus.textContent = "練習時間";
+    centerStatus.classList.add('active');
+    await waitVideoLoops(3);
     
-    shutterFX();
-    statusBar.classList.add('recording');
-    statusText.textContent = "錄影中";
+    // 3. 倒數
+    await countdownCenter(); 
     
+    // 4. 拍攝
+    centerStatus.textContent = "拍攝中";
     const clipBlob = await recordClip(2500);
     await saveClipToDB(clipBlob, i);
     
-    statusBar.classList.remove('recording');
+    // 5. 段落結束
+    centerStatus.classList.remove('active');
   }
   
+  localStorage.setItem('booth_clip_count', totalSteps);
+
   msgTitle.textContent = '拍攝完成';
   msgSub.textContent = '處理中...';
   loading.classList.add('show');
@@ -480,6 +603,30 @@ startCamera();
 (function(){
   function setVH(){ document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px'); }
   window.addEventListener('resize', setVH); setVH();
+})();
+
+// ... (接在原本 script 的最後面)
+
+(function(){
+  const cursor = document.getElementById('fake-cursor');
+  let mouseX = -100, mouseY = -100; 
+  let curX = -100, curY = -100;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  document.addEventListener('mousedown', () => cursor.classList.add('is-clicking'));
+  document.addEventListener('mouseup', () => cursor.classList.remove('is-clicking'));
+
+  function renderCursor() {
+    curX += (mouseX - curX) * 0.2;
+    curY += (mouseY - curY) * 0.2;
+    cursor.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
+    requestAnimationFrame(renderCursor);
+  }
+  renderCursor();
 })();
 </script>
 </body>

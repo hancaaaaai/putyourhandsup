@@ -83,17 +83,24 @@
     @media (max-height: 740px){ .stage{ transform: translateY(-3vh); } }
   </style>
 
-  <script>
-    (function(){
-      function setVH(){
-        var h = (window.visualViewport? visualViewport.height : window.innerHeight);
-        document.documentElement.style.setProperty('--vh', (h*0.01) + 'px');
+<script>
+    try {
+      // 1. 讀取使用者角色
+      const data = JSON.parse(localStorage.getItem('photobooth_template') || '{}');
+      
+      if(data.role) {
+        document.getElementById('role-name').textContent = data.role;
+        
+        // ★ 修改點：動態設定模板影片路徑
+        // 假設你的每個角色資料夾內都有一個名為 "template.webm" 的檔案
+        const videoEl = document.getElementById('tpl-video');
+        videoEl.src = `video/${data.role}/template.webm`;
       }
-      setVH();
-      addEventListener('resize', setVH, {passive:true});
-      addEventListener('orientationchange', setVH, {passive:true});
-    })();
-  </script>
+
+    } catch(e) {
+      console.warn('讀取資料失敗', e);
+    }
+</script>
 </head>
 <body>
   <div class="outer">
