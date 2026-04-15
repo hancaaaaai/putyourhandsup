@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>你的專屬手語拍貼</title>
+    <style>
+        body { margin: 0; background: #f4f4f4; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+        .v-card { width: 90%; max-width: 400px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        video { width: 100%; border-radius: 10px; margin-bottom: 20px; }
+        .dl-btn { background: #00EAFF; color: white; padding: 15px 30px; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="v-card">
+        <h2 style="color: #4A4A4A;">🎉 拍貼完成！</h2>
+      <video id="player" controls autoplay loop muted playsinline></video>
+        <p style="font-size: 0.9rem; color: #888;">長按影片或點擊下方按鈕下載 MP4</p>
+      <a id="downloadBtn" class="dl-btn" href="#" target="_blank">📥 打開影片以儲存</a>
+    </div>
+<script>
+        // 直接抓取網址參數裡的影片連結
+        const videoUrl = new URLSearchParams(window.location.search).get('video');
+        if(videoUrl) {
+            // 1. 播放器使用原本的網址（讓 iPhone 可以順利預覽播放）
+            document.getElementById('player').src = videoUrl;
+            
+            // 2. 🌟 下載按鈕的專屬魔法：加入 fl_attachment 強制觸發下載！
+            const downloadUrl = videoUrl.replace('/upload/', '/upload/fl_attachment/');
+            document.getElementById('downloadBtn').href = downloadUrl;
+        }
+    </script>
+</body>
+</html>
